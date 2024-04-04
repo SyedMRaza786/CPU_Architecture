@@ -104,7 +104,11 @@ module fp_normalize_round(
 endmodule
 
 
-// Unpacks two 32-bit floating-point values
+///////////////////////////////////////////////////
+//																							//
+// unpacks 2 floating-point values => bits			//
+//																							//
+///////////////////////////////////////////////////
 module unpack_bits (
   input        [31:0] a,
   input        [31:0] b,
@@ -128,31 +132,30 @@ endmodule
 
 ///////////////////////////////////////////////////
 //																							//
-// packs bits ==> floating-point value					//
-// PASSES TB
+// packs bits => floating-point value				   	//
 //																							//
 ///////////////////////////////////////////////////
 module pack_bits (
-  input        [23:0] mantissa,
-  input        [9:0]  exp,
-  input logic        	sign,
+  input        [23:0] m,
+  input        [9:0]  e,
+  input logic        	s,
   output logic [31:0] n
 );
 
   always_comb begin
-    n = {sign, exp[7:0] + 8'd127, mantissa[22:0]};
+    n = {s, e[7:0] + 8'd127, m[22:0]};
 
-    if ($signed(exp) == -126) begin
-      if (mantissa[23] == 0) begin
+    if ($signed(e) == -126) begin
+      if (m[23] == 0) begin
         n[30:23] = 0;
       end
-      if (mantissa == 24'h0) begin
+      if (m == 24'h0) begin
         n[31] = 1'b0;
       end
     end
 
 		// Overflow case
-    if ($signed(exp) > 127) begin n = {sign, 8'hFF, 23'h0}; end
+    if ($signed(e) > 127) begin n = {s, 8'hFF, 23'h0}; end
   end
 endmodule
 
@@ -185,19 +188,18 @@ module fp_adder(
 
 	logic op1_is_zero, op2_is_zero, op1_is_inf, op2_is_inf, op1_is_nan, op2_is_nan;
 	logic [31:0] special_result;
-	logic sign_op1 = op1[31];
-	logic [7:0] exponent_op1 = op1[30:23];
-	logic [22:0] significand_op1 = {1'b1, op1[22:0]};  // Assumes normalized
+	logic op1_s = op1[31];
+	logic [7:0] op1_e = op1[30:23];
+	logic [22:0] op1_m = {1'b1, op1[22:0]};  // Assumes normalized
 	logic sign_op2 = op2[31];
-	logic [7:0] exponent_op2 = op2[30:23];
-	logic [22:0] significand_op2 = {1'b1, op2[22:0]};  // Assumes normalized
-	logic [7:0] larger_exponent, smaller_exponent, exponent_diff;
-	logic [23:0] aligned_significand_op1, aligned_significand_op2;
+	logic [7:0] op2_e = op2[30:23];
+	logic [22:0] op2_m = {1'b1, op2[22:0]};  // Assumes normalized
+	logic [7:0] larger_e, smaller_e, e_delta;
+	logic [23:0] op1_aligned_m, op2_aligned_m;
 	logic [24:0] sum;  // Include carry in the sum
 	logic sign_result;
 
 	adder_stage_t adder_stage;
-
 
 	unpack_bits unpacked(
 			.a(op1),
@@ -221,7 +223,6 @@ module fp_adder(
 			.op2_is_nan(op2_is_nan),
 			.result(special_result)
 	);
-
 
 	// Determine the larger exponent and the exponent difference
 	always @(negedge reset or posedge clk) begin
@@ -249,23 +250,23 @@ module fp_adder(
 
     larger_e = (a_e >= b_e) ? a_e : b_e;
     smaller_e = (a_e >= b_e) ? b_e : a_e;
-    exponent_delta = larger_e - smaller_e;
+    e_delta = larger_e - smaller_e;
 
 		/// MANTISSA COMPUTATION
 		// Align mantissa components
-    aligned_mantissa_op1 = (a_e >= b_e) ? {1'b0, a_m} : ({1'b0, a_m} >> exponent_delta);
-    aligned_mantissa_op2 = (a_e < b_e) ? {1'b0, b_m} : ({1'b0, b_m} >> exponent_delta);
+    op1_aligned_m = (a_e >= b_e) ? {1'b0, a_m} : ({1'b0, a_m} >> e_delta);
+    op2_aligned_m = (a_e < b_e) ? {1'b0, b_m} : ({1'b0, b_m} >> e_delta);
 
     if (a_s == b_s) begin
-        sum = {1'b0, aligned_mantissa_op1} + {1'b0, aligned_mantissa_op2}; // Prevent carry-out
+        sum = {1'b0, op1_aligned_m} + {1'b0, op2_aligned_m}; // Prevent carry-out
         sign_result = a_s;
 		end else begin
         // Ensure magnitude comparison is based on original, unshifted significands
         if (a_e > b_e || (a_e == b_e && a_m >= b_m)) begin
-            sum = {1'b0, aligned_mantissa_op1} - {1'b0, aligned_mantissa_op2};
+            sum = {1'b0, op1_aligned_m} - {1'b0, op2_aligned_m};
             sign_result = a_s;
 				end else begin
-            sum = {1'b0, aligned_mantissa_op2} - {1'b0, aligned_mantissa_op1};
+            sum = {1'b0, op2_aligned_m} - {1'b0, op1_aligned_m};
             sign_result = b_s;
 				end
 		end
@@ -288,7 +289,7 @@ end
 	
 fp_normalize_round normalize_round_unit(
         .sign(sign_result),
-        .exponent(larger_e),
+        .e(larger_e),
         .mantissa(sum),
         .result(normalized_result)
     );
