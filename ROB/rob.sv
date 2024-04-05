@@ -14,7 +14,7 @@
 `define LD  3'b010
 `define ST  3'b011
 `define FP  3'b100
-module rs (
+module rob (
     input logic            clock,          // system clock
     input logic            reset,          // system reset
     input logic            valid,
@@ -25,15 +25,14 @@ module rs (
     input logic            commit, 
     input logic [31:0]     value,
 
-    output logic[31:0]      V,
-    output logic[4:0]       R,
     output logic            buffer_full,
-    output logic            buffer_completed
+    output logic            buffer_completed,
     output logic[3:0]       head,
     output logic[3:0]       tail,
     output logic[2:0]       opcodes[7:0],
     output logic[4:0]       input_reg_1s[7:0],
     output logic[4:0]       input_reg_2s[7:0],
+    output logic[4:0]       dest_regs[7:0],
     output logic[4:0]       Rs[7:0],
     output logic[31:0]      Vs[7:0]
 ); 
@@ -68,15 +67,13 @@ module rs (
               input_reg_2s[i] <= 5'b0;
               Rs[i] <= 5'b0;
               Vs[i] <= 32'b0;
-	      V <= 5'b0;
-              R <= 32'b0;
               buffer_full <= 0;
 	      buffer_completed <= 0;
             end
             
             
 	end else begin
-	    if(valid == 0) begin
+	    if(valid == 1) begin
 		if(head == 0 && tail == 0) begin
 		    head            <= 1;
 		    tail            <= 1;
@@ -97,8 +94,8 @@ module rs (
 		Vs[head] <= value;
 		if(head == 8) begin
 		    buffer_completed <= 1;
-                    h <= 0;
-		    t <= 0;
+                    head <= 0;
+		    tail <= 0;
 		end
 	    end
 	    if(tail == 8) begin
