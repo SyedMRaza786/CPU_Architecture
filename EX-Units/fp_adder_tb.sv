@@ -43,8 +43,8 @@ module fp_adder_tb;
     assert(result === 32'h40b00000) else $error("Test case 1 failed");
 
     // Test case 2: Add a positive and a negative number
-    #10 op1 = 32'h40200000; // 2.5 in IEEE 754 single precision
-    op2 = 32'hC0400000; // -3.0 in IEEE 754 single precision
+    #10 op1 = 32'h40200000; // 2.5 in IEEE 754 single precision - 0 1000 0000 010 0000 0000 0000 0000 0000
+    op2 = 32'hC0400000; // -3.0 in IEEE 754 single precision      1 1000 0000 100 0000 0000 0000 0000 0000
     valid = 1;
 
     #10 valid = 0;

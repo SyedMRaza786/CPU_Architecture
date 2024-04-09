@@ -10,7 +10,7 @@ module fp_special_cases(
     output logic 					b_is_nan,
     output logic [31:0] 	result
 );
-
+    localparam [7:0] ZERO_E = 8'h00;
 		localparam [7:0] MAX_E = 8'hFF;
     localparam [22:0] ZERO_M = 23'h0;
 
@@ -23,8 +23,8 @@ module fp_special_cases(
     logic [22:0] b_m = b[22:0];
 
 		always @(posedge clk) begin
-        a_is_zero = (a_e == 8'h00) && (a_m == ZERO_M);
-        b_is_zero = (b_e == 8'h00) && (b_m == ZERO_M);
+        a_is_zero = (a_e == ZERO_E) && (a_m == ZERO_M);
+        b_is_zero = (b_e == ZERO_E) && (b_m == ZERO_M);
         a_is_inf = (a_e == MAX_E) && (a_m == ZERO_M);
         b_is_inf = (b_e == MAX_E) && (b_m == ZERO_M);
         a_is_nan = (a_e == MAX_E) && (a_m != ZERO_M);
@@ -43,99 +43,82 @@ module fp_special_cases(
     end
 endmodule
 
-module fp_normalize_round(
-		input        				clk,
-    input        				s,
-    input logic [7:0] 	e,
-    input logic [24:0] 	m,
-    output logic        result
-);
-    logic [7:0] adjusted_e;
-    logic [24:0] adjusted_m;
-    logic ceiling;
-    logic overflow;
+// module fp_normalize_round(
+// 		input        				clk,
+//     input        				s,
+//     input logic [7:0] 	e,
+//     input logic [24:0] 	m,
+//     output logic        result
+// );
+//     logic [7:0] adjusted_e;
+//     logic [24:0] adjusted_m;
+//     logic ceiling;
+//     logic overflow;
 
-    // Normalize the result
-    always @(posedge clk) begin
-        // Find the position of the leading 1 in the mantissa
-        int leading_one_idx;
-        leading_one_idx = $high(m);
+//     // Normalize the result
+//     always @(posedge clk) begin
+//         // Find the position of the leading 1 in the mantissa
+//         int leading_one_idx;
+//         leading_one_idx = $high(m);
 
-        // Adjust exponent and mantissa based on the leading 1 position
-        if (leading_one_idx < 23) begin
-            adjusted_e = e - (23 - leading_one_idx);
-            adjusted_m = m << (23 - leading_one_idx);
-        end else begin
-            adjusted_e = e + (leading_one_idx - 23);
-            adjusted_m = m >> (leading_one_idx - 23);
-        end
+//         // Adjust exponent and mantissa based on the leading 1 position
+//         if (leading_one_idx < 23) begin
+//             adjusted_e = e - (23 - leading_one_idx);
+//             adjusted_m = m << (23 - leading_one_idx);
+//         end else begin
+//             adjusted_e = e + (leading_one_idx - 23);
+//             adjusted_m = m >> (leading_one_idx - 23);
+//         end
 
-        // // Round the result (assuming round-to-nearest, ties-to-even)
-        // logic = adjusted_m[0];  // Least significant bit of the result
-        // logic guard = adjusted_m[1];  // Guard bit (first bit after the LSB)
-        // logic round = adjusted_m[2];  // Round bit (second bit after the LSB)
-        // logic sticky = | adjusted_m[3:2];  // Sticky bit (OR of remaining bits)
+//         // // Round the result (assuming round-to-nearest, ties-to-even)
+//         // logic = adjusted_m[0];  // Least significant bit of the result
+//         // logic guard = adjusted_m[1];  // Guard bit (first bit after the LSB)
+//         // logic round = adjusted_m[2];  // Round bit (second bit after the LSB)
+//         // logic sticky = | adjusted_m[3:2];  // Sticky bit (OR of remaining bits)
 
-        // ceiling = guard && (round || sticky || lsb);
+//         // ceiling = guard && (round || sticky || lsb);
 
-        // // Perform rounding
-        // if (ceiling) begin
-        //     adjusted_m = adjusted_m + 2;
-        //     // Handle overflow from rounding
-        //     if (adjusted_m[24]) begin
-        //         adjusted_e = adjusted_e + 1;
-        //         adjusted_m = adjusted_m >> 1;
-        //     end
-        // end
+//         // // Perform rounding
+//         // if (ceiling) begin
+//         //     adjusted_m = adjusted_m + 2;
+//         //     // Handle overflow from rounding
+//         //     if (adjusted_m[24]) begin
+//         //         adjusted_e = adjusted_e + 1;
+//         //         adjusted_m = adjusted_m >> 1;
+//         //     end
+//         // end
 
-        // // Handle overflow after rounding
-        // overflow = (adjusted_e >= 8'hFF);
+//         // // Handle overflow after rounding
+//         // overflow = (adjusted_e >= 8'hFF);
 
-        // Assemble the final result
-        // Representing infinity with the correct sign
-        if (overflow) begin
-            result = {s, 8'hFF, 23'h0};
-        end
-        // Mask off the implicit bit as it's not stored in IEEE format
-        else begin
-            result = {s, adjusted_e, adjusted_m[23:1]};
-        end
-    end
-endmodule
-
-
-///////////////////////////////////////////////////
-//																							//
-// unpacks 2 floating-point values => bits			//
-//																							//
-///////////////////////////////////////////////////
-module unpack_bits (input        [31:0] a,
-                    input        [31:0] b,
-                    output logic [26:0] a_m, // 27-bit mantissa
-                    output logic [26:0] b_m,
-                    output logic [9:0]  a_e, // 10-bit exponent
-                    output logic [9:0]  b_e,
-                    output logic        a_s, // sign bit
-                    output logic        b_s
-);
-
-  assign a_m = {a[22:0], 3'd0};
-  assign b_m = {b[22:0], 3'd0};
-  assign a_e = a[30:23] - 127;
-  assign b_e = b[30:23] - 127;
-  assign a_s = a[31];
-  assign b_s = b[31];
-
-endmodule
+//         // Assemble the final result
+//         // Representing infinity with the correct sign
+//         if (overflow) begin
+//             result = {s, 8'hFF, 23'h0};
+//         end
+//         // Mask off the implicit bit as it's not stored in IEEE format
+//         else begin
+//             result = {s, adjusted_e, adjusted_m[23:1]};
+//         end
+//     end
+// endmodule
 
 
-typedef enum logic [3:0] {
+typedef enum logic [4:0] {
   START           = 4'd0,
-	UNPACK_NR 			= 4'd1,
+  UNPACK_NR       = 4'd1,
   SPECIAL_CASE    = 4'd2,
-  NORMALIZE_ROUND = 4'd3,
-	PACK_RESULT			= 4'd4,
-  READY           = 4'd5
+  NORMALIZE       = 4'd3,
+  ROUND           = 4'd4,
+  PACK_RESULT     = 4'd5,
+  READY           = 4'd6,
+  IDLE            = 4'd7,
+  UNPACK_NR2      = 4'd8,
+  ALIGN      = 4'd9,
+  ADD             = 4'd10,
+  ROUND2          = 4'd11,
+  ADD2          = 4'd12,
+  PRECHECK      = 4'd13
 } adder_stage_t;
 
 
@@ -149,9 +132,9 @@ module fp_adder(input logic           clk,
 );
 
   logic       [31:0] a, b, z;
-  logic       [26:0] a_m, b_m;
-  logic       [23:0] z_m;
-  logic       [9:0] a_e, b_e, z_e;
+  logic       [24:0] a_m, b_m;
+  logic       [24:0] z_m;
+  logic       [7:0] a_e, b_e, z_e;
   logic       a_s, b_s, z_s;
 
   logic op1_is_zero, op2_is_zero, op1_is_inf, op2_is_inf, op1_is_nan, op2_is_nan;
@@ -163,22 +146,15 @@ module fp_adder(input logic           clk,
   logic [7:0] op2_e = op2[30:23];
   logic [22:0] op2_m = {1'b1, op2[22:0]};  // Assumes normalized
   logic [7:0] larger_e, smaller_e, e_delta;
-  logic [23:0] op1_aligned_m, op2_aligned_m;
-  logic [24:0] sum;  // Include carry in the sum
+  logic [27:0] op1_aligned_m, op2_aligned_m;
+  logic [31:0] sum;  // Include carry in the sum
   logic sign_of_result;
 
   adder_stage_t adder_stage;
 
-	unpack_bits unpacked_unit(
-    .a(op1),
-    .b(op2),
-    .a_m(a_m),
-    .b_m(b_m),
-    .a_e(a_e),
-    .b_e(b_e),
-    .a_s(a_s),
-    .b_s(b_s)
-	);
+  initial begin
+    adder_stage = IDLE;
+  end
 
   fp_special_cases special_case_unit(
     .clk(clk),
@@ -193,200 +169,230 @@ module fp_adder(input logic           clk,
     .result(special_result)
 	);
 
+  logic a_denorm, b_denorm;
+  logic guard, round, sticky;
 
-  fp_normalize_round normalize_round_unit(
-    .clk(clk),
-    .s(sign_of_result),
-    .e(larger_e),
-    .m(sum),
-    .result(normalized_result)
-    );
-
-	// Determine the larger exponent and the exponent difference
-	always @(negedge reset or posedge clk) begin
-		if (reset == 0) begin
-			adder_stage <= START;
-			done <= 0;
-		end else begin
-			case(adder_stage)
+	always @(posedge clk) begin
+    if (reset && adder_stage == IDLE) begin
+      adder_stage <= START;
+      done <= 0;
+      $display("if (reset) begin");
+    end else begin
+      case (adder_stage)
 				START: begin
+          $display("START valid=%h", valid);
 					if (valid) begin
+            $display("START");
+            $display("op1: %d, op2: %d", op1, op2);
 						a <= op1;
 						b <= op2;
+            done <= 0;
+            a_m <= {op1[22:0], 3'd0};
+            b_m <= {op2[22:0], 3'd0};
+            // Stored exponents
+            a_e <= op1[30:23] - 127;
+            b_e <= op2[30:23] - 127;
+            a_s <= op1[31];
+            b_s <= op2[31];
+            // Case 1: exponents == 0000 0000
+            a_denorm = (op1[30:23] == 8'h00);
+            b_denorm = (op2[30:23] == 8'h00);
 						adder_stage <= UNPACK_NR;
 					end
 				end // START
 
 				UNPACK_NR: begin
-					// a_m <= unpacked_unit.a_m;
-					// b_m <= unpacked_unit.b_m;
-					// a_e <= unpacked_unit.a_e;
-					// b_e <= unpacked_unit.b_e;
-					// a_s <= unpacked_unit.a_s;
-					// b_s <= unpacked_unit.b_s;
+          $display("%h + %h = %h", op1, op2, result);
+          $display("%b", op1);
+          $display("%b", op2);
+          $display("--------------------------------");
+          $display("a_m=%d (%b) a_e=%d (%b) a_s=%d (%b)", a_m, a_m, a_e, a_e, a_s, a_s);
+          $display("b_m=%d (%b) b_e=%d (%b) b_s=%d (%b)", b_m, b_m, b_e, b_e, b_s, b_s);
+          $display("a_e: %h, b_e: %h", a_e, b_e);
+          $display("UNPACK_NR");
 
-          // op1_is_zero <= special_case_unit.a_is_zero;
-          // op2_is_zero <= special_case_unit.b_is_zero;
-          // op1_is_inf <= special_case_unit.a_is_inf;
-          // op2_is_inf <= special_case_unit.b_is_inf;
-          // op1_is_nan <= special_case_unit.a_is_nan;
-          // op2_is_nan <= special_case_unit.b_is_nan;
-          // special_result <= special_case_unit.result;
-
+          // Assign the exponent values based on denormalized or normalized numbers
+          a_e = a_denorm ? 10'h1FF : {2'b00, op1[30:23]} - 127;
+          b_e = b_denorm ? 10'h1FF : {2'b00, op2[30:23]} - 127;
           // Determine the larger exponent, smaller exponent, and exponent diff
           larger_e = (a_e >= b_e) ? a_e : b_e;
           smaller_e = (a_e >= b_e) ? b_e : a_e;
-          e_delta = larger_e - smaller_e;
+          e_delta = larger_e - smaller_e; // For alignment of the binary pt
+          adder_stage <= PRECHECK;
+        end
 
+        PRECHECK: begin
+          if (a_e == 255 || b_e == 255) begin
+            adder_stage <= READY;
+          end else if (a_e == 0 && a_m == 0 || b_e == 0 && b_m == 0) begin
+            if (a_e == 0) begin
+              z <= op2;
+            end else begin
+              z <= op1;
+            end
+            adder_stage <= READY;
+          end
+          adder_stage <= ALIGN;
+        end
+
+        ALIGN: begin
+          $display("a_e: %d, b_e: %d", a_e, b_e);
+          $display("a_m=%h a_e=%h a_s=%h", a_m, a_e, a_s);
+          $display("b_m=%d b_e=%d b_s=%d", b_m, b_e, b_s);
+          $display("larger_e=%d (%b), smaller_e=%d (%b), e_delta=%d (%b)", larger_e, larger_e, smaller_e, smaller_e, e_delta, e_delta);
+          // $display("larger_e=%b, smaller_e=%b, e_delta=%b", larger_e, smaller_e, e_delta);
+          $display("ALIGN");
           // Align mantissa components based on the exponent diff
-          if (a_e >= b_e) begin
-            op1_aligned_m <= {1'b1, a_m[25:3]};
-            op2_aligned_m <= {1'b1, b_m[25:3]} >> e_delta;
-          end else begin
-            op1_aligned_m <= {1'b1, a_m[25:3]} >> e_delta;
-            op2_aligned_m <= {1'b1, b_m[25:3]};
+          if (a_e > b_e) begin
+            op1_aligned_m <= {1'b1, a_m[26:0]};
+            op2_aligned_m <= {1'b1, b_m[26:0]} >> e_delta;
+            b_e <= b_e + 1;
+            b_m <= b_m >> 1;
+            b_m[0] <= b_m[0] | b_m[1];
+          end else if (b_e > a_e) begin
+            op1_aligned_m <= {1'b1, a_m[26:0]} >> e_delta;
+            op2_aligned_m <= {1'b1, b_m[26:0]};
+            a_e <= a_e + 1;
+            a_m <= a_m >> 1;
+            a_m[0] <= a_m[0] | a_m[1];
           end
           if (op1_is_zero || op2_is_zero || op1_is_inf || op2_is_inf || op1_is_nan || op2_is_nan) begin
-            adder_stage <= READY;
+            adder_stage <= SPECIAL_CASE;
           end else begin
-            adder_stage <= NORMALIZE_ROUND;
+            adder_stage <= ADD;
           end
-    		end // UNPACK_NR
+    		end // ALIGN
 
-        // SPECIAL_CASE: begin
-        //     if (op1_is_nan || op2_is_nan || op1_is_inf || op2_is_inf || (op1_is_zero && op2_is_zero)) begin
-        //         adder_stage <= READY;
-        //     end
-        // end // SPECIAL_CASE
-          // if (op1_is_nan || op2_is_nan) begin
-          //     special_result <= 32'h7FFFFFFF; // NaN
-          // end else if (op1_is_inf || op2_is_inf) begin
-          //     if (op1_is_inf && op2_is_inf && (a_s != b_s)) begin
-          //         special_result <= 32'h7FFFFFFF; // NaN (inf - inf)
-          //     end else begin
-          //         special_result <= {a_s || b_s, 8'hFF, 23'h0}; // Inf
-          //     end
-          // end else if (op1_is_zero && op2_is_zero) begin
-          //     special_result <= {a_s && b_s, 31'h0}; // Zero-value
-          // end
-          // adder_stage <= PACK_RESULT;
-        // end // SPECIAL_CASE
-
-        NORMALIZE_ROUND: begin
+        ADD: begin
+          $display("op1_aligned_m=%b, op2_aligned_m=%b", op1_aligned_m, op2_aligned_m);
+          $display("ADD");
+          z_e <= a_e;
           if (a_s == b_s) begin
-            sum <= op1_aligned_m + op2_aligned_m;
-            sign_of_result <= a_s;
+            sum <= a_m - b_m;
+            // sum <= {1'b0, a_m} + {1'b0, b_m};
+            z_s <= a_s;
           end else begin
-            if (op1_aligned_m >= op2_aligned_m) begin
-              sum <= op1_aligned_m - op2_aligned_m;
-              sign_of_result <= a_s;
+            if (a_m >= b_m) begin
+              sum <= a_m - b_m;
+              // sum <= {1'b0, a_m} - {1'b0, b_m};
+              z_s <= a_s;
             end else begin
-              sum <= op2_aligned_m - op1_aligned_m;
-              sign_of_result <= b_s;
+              sum <= {1'b0, b_m} - {1'b0, a_m};
+              z_s <= b_s;
             end
           end
+          adder_stage <= ADD2;
+        end // ADD
+        ADD2: begin
+          $display("sum=%b, z_s=%b, z_m=%b", sum, z_s, z_m);
+          $display("ADD2");
+          if (sum[27]) begin
+            z_m <= sum[27:4];
+            guard <= sum[3];
+            round <= sum[2];
+            sticky <= sum[1] | sum[0];
+            z_e <= z_e + 1;
+          end else begin
+            z_m <= sum[26:3];
+            guard <= sum[2];
+            round <= sum[1];
+            sticky <= sum[0];
+          end
+          adder_stage <= NORMALIZE;
+        end // ADD2
 
-          // Normalize the result
+        NORMALIZE: begin
+          $display("sum=%b, z_s=%b, z_m=%b", sum, z_s, z_m);
+          $display("op1_aligned_m=%b, op2_aligned_m=%b", op1_aligned_m, op2_aligned_m);
+          $display("%b + %b = %b", op1, op2, sum);
+          $display("NORMALIZE");
+          // OVERFLOW: SR the hidden bit
           if (sum[24]) begin
-            // Overflow occurred: shift right and increment exponent
-            z_m <= sum[23:0];
+            $display("NORMALIZE: sum[24] - OVERFLOW");
+            z_m <= sum[24:1];
             z_e <= larger_e + 1;
           end else begin
-            // No overflow: find the leading 1 and shift accordingly
+            // NO OVERFLOW
             if (sum[23]) begin
+              $display("NORMALIZE: sum[23]");
               z_m <= sum[22:0];
               z_e <= larger_e;
             end else if (sum[22]) begin
+              $display("NORMALIZE: sum[22]");
               z_m <= {sum[21:0], 1'b0};
               z_e <= larger_e - 1;
             end else if (sum[21]) begin
+              $display("NORMALIZE: sum[21]");
               z_m <= {sum[20:0], 2'b00};
               z_e <= larger_e - 2;
             end else if (sum[20]) begin
+              $display("NORMALIZE: sum[20]");
               z_m <= {sum[19:0], 3'b000};
               z_e <= larger_e - 3;
             end else begin
+              $display("NORMALIZE: else case (underflow)");
               // Underflow occurred: set result to zero
               z_m <= 24'b0;
               z_e <= 10'b0;
             end
           end
+          adder_stage <= ROUND2;
+        end
 
-          if (z_m[2] && (z_m[1] || z_m[0])) begin
-            z_m <= z_m + 1;
-            if (z_m[23]) begin
-              // Rounding => overflow: shift right and increment exponent
-              z_m <= z_m >> 1;
+        ROUND: begin
+          $display("guard=%h round=%h sticky=%h", guard, round, sticky);
+          $display("z_m=%b z_e=%b z_s=%b", z_m, z_e, z_s);
+          $display("sum=%b", sum);
+          $display("");
+          $display("ROUND");
+          // Extract the guard, round, and sticky bits
+          guard = z_m[1];
+          round = z_m[2];
+          sticky = |z_m[24:3];
+          adder_stage <= ROUND2;
+        end
+        ROUND2: begin
+          $display("guard=%h round=%h sticky=%h", guard, round, sticky);
+          $display("\nROUND2");
+          // Perform rounding based on the guard, round, and sticky bits
+          if (guard && (round | sticky | z_m[0])) begin
+            z_m <= z_m[24:1] + 1;
+            if (z_m[24]) begin
+              // Rounding caused overflow: shift right and increment exponent
+              z_m <= z_m[24:1];
               z_e <= z_e + 1;
             end
+          end else begin
+            // No rounding needed, just truncate the mantissa
+            z_m <= z_m[24:1];
           end
-          z_s <= sign_of_result;
+          adder_stage <= SPECIAL_CASE;
+        end
+        SPECIAL_CASE: begin
+          z[22:0] <= z_m[22:0];
+          z[30:23] <= z_e[7:0] + 127;
+          z[31] <= z_s;
+          if ($signed(z_e) == -126 && z_m[23] == 0) begin
+            z[30:23] <= 0;
+          end
+          if ($signed(z_e) == -126 && z_m[23:0] == 24'h0) begin
+            z[31] <= 1'b0; // FIX SIGN BUG: -a + a = +0.
+          end
+          //if overflow occurs, return inf
+          if ($signed(z_e) > 127) begin
+            z[22:0] <= 0;
+            z[30:23] <= 255;
+            z[31] <= z_s;
+          end
           adder_stage <= READY;
-        end // NORMALIZE_ROUND
-
-
+        end
         READY: begin
-          done <= 1;
-          if (!valid) begin
-            adder_stage <= START;
-            done <= 0;
-          end
-        end // READY
+          $display("READY: result <= %h", z);
+          done        <= 1;
+          result     <= z;
+          adder_stage      <= IDLE;
+        end
       endcase
     end
   end
-
-  // Select the final result based on special cases and done signal
-  always_comb begin
-    if (done) begin
-        if (special_result != 32'h0) begin
-            result = special_case_unit.result;
-        end else begin
-            result = pack_bits(z_m, z_e, z_s);
-        end
-    end else begin
-        result = 32'h0; // Default value when not done
-    end
-  end
-
-  ///////////////////////////////////////////////////
-  //																							//
-  // packs bits => floating-point value				   	//
-  //																							//
-  ///////////////////////////////////////////////////
-  function logic [31:0] pack_bits(
-    input [23:0] m,
-    input [9:0] e,
-    input s
-);
-    logic [31:0] n;
-    logic [23:0] rounded_m;
-    logic [7:0] biased_e;
-    logic overflow, underflow;
-    logic round_up;
-
-    begin
-      // Adjust the exponent bias
-      biased_e = e[7:0] + 8'd127;
-      // Check for overflow and underflow (parallel with rounding)
-      overflow = (e >= 10'd128);
-      underflow = (e < -10'd126);
-      // Round the mantissa to 23 bits (assume round-to-nearest, tie-to-even)
-      round_up = m[0] && ((m[1] && (|m[2:0])) || m[1]);
-      rounded_m = m + {23'b0, round_up};
-      // Normalize the rounded mantissa and adjust the exponent (parallel with overflow/underflow checks)
-      biased_e = biased_e + rounded_m[23];
-      rounded_m = rounded_m >> rounded_m[23];
-      // Merge overflow and underflow checks
-      if (overflow || underflow) begin
-          // Set the result to infinity or zero based on the sign
-          n = {s, overflow ? 8'hFF : 8'h00, 23'h0};
-      end else begin
-          // Assemble the result for normal numbers and subnormals
-          n = {s, biased_e, rounded_m[22:0]};
-      end
-      pack_bits = n;
-    end
-  endfunction
-
 endmodule
