@@ -132,9 +132,9 @@ module fp_adder(input logic           clk,
 );
 
   logic       [31:0] a, b, z;
-  logic       [24:0] a_m, b_m;
-  logic       [24:0] z_m;
-  logic       [7:0] a_e, b_e, z_e;
+  logic       [26:0] a_m, b_m;
+  logic       [23:0] z_m;
+  logic       [9:0] a_e, b_e, z_e;
   logic       a_s, b_s, z_s;
 
   logic op1_is_zero, op2_is_zero, op1_is_inf, op2_is_inf, op1_is_nan, op2_is_nan;
@@ -147,7 +147,7 @@ module fp_adder(input logic           clk,
   logic [22:0] op2_m = {1'b1, op2[22:0]};  // Assumes normalized
   logic [7:0] larger_e, smaller_e, e_delta;
   logic [27:0] op1_aligned_m, op2_aligned_m;
-  logic [31:0] sum;  // Include carry in the sum
+  logic [27:0] sum;  // Include carry in the sum
   logic sign_of_result;
 
   adder_stage_t adder_stage;
@@ -202,13 +202,13 @@ module fp_adder(input logic           clk,
 				end // START
 
 				UNPACK_NR: begin
-          $display("%h + %h = %h", op1, op2, result);
+          // $display("%h + %h = %h", op1, op2, result);
           $display("%b", op1);
           $display("%b", op2);
           $display("--------------------------------");
           $display("a_m=%d (%b) a_e=%d (%b) a_s=%d (%b)", a_m, a_m, a_e, a_e, a_s, a_s);
           $display("b_m=%d (%b) b_e=%d (%b) b_s=%d (%b)", b_m, b_m, b_e, b_e, b_s, b_s);
-          $display("a_e: %h, b_e: %h", a_e, b_e);
+          // $display("a_e: %h, b_e: %h", a_e, b_e);
           $display("UNPACK_NR");
 
           // Assign the exponent values based on denormalized or normalized numbers
@@ -232,24 +232,39 @@ module fp_adder(input logic           clk,
             end
             adder_stage <= READY;
           end
+          //Denormalised Number
+          if ($signed(a_e) == -127) begin
+            $display("SPECIAL_CASE denorm 1");
+            a_e <= -126;
+          end else begin
+            $display("SPECIAL_CASE denorm 2");
+            a_m[26] <= 1;
+          end
+
+          if ($signed(b_e) == - 127) begin
+            $display("SPECIAL_CASE denorm 3");
+            b_e <= -126;
+          end else begin
+            $display("SPECIAL_CASE denorm 4");
+            b_m[26] <= 1;
+          end
           adder_stage <= ALIGN;
         end
 
         ALIGN: begin
-          $display("a_e: %d, b_e: %d", a_e, b_e);
-          $display("a_m=%h a_e=%h a_s=%h", a_m, a_e, a_s);
-          $display("b_m=%d b_e=%d b_s=%d", b_m, b_e, b_s);
+          $display("a_m=%d (%b) a_e=%d (%b) a_s=%d (%b)", a_m, a_m, a_e, a_e, a_s, a_s);
+          $display("b_m=%d (%b) b_e=%d (%b) b_s=%d (%b)", b_m, b_m, b_e, b_e, b_s, b_s);
           $display("larger_e=%d (%b), smaller_e=%d (%b), e_delta=%d (%b)", larger_e, larger_e, smaller_e, smaller_e, e_delta, e_delta);
           // $display("larger_e=%b, smaller_e=%b, e_delta=%b", larger_e, smaller_e, e_delta);
           $display("ALIGN");
           // Align mantissa components based on the exponent diff
-          if (a_e > b_e) begin
+          if ($signed(a_e) > $signed(b_e)) begin
             op1_aligned_m <= {1'b1, a_m[26:0]};
             op2_aligned_m <= {1'b1, b_m[26:0]} >> e_delta;
             b_e <= b_e + 1;
             b_m <= b_m >> 1;
             b_m[0] <= b_m[0] | b_m[1];
-          end else if (b_e > a_e) begin
+          end else if ($signed(b_e) > $signed(a_e)) begin
             op1_aligned_m <= {1'b1, a_m[26:0]} >> e_delta;
             op2_aligned_m <= {1'b1, b_m[26:0]};
             a_e <= a_e + 1;
@@ -268,7 +283,7 @@ module fp_adder(input logic           clk,
           $display("ADD");
           z_e <= a_e;
           if (a_s == b_s) begin
-            sum <= a_m - b_m;
+            sum <= a_m + b_m;
             // sum <= {1'b0, a_m} + {1'b0, b_m};
             z_s <= a_s;
           end else begin
@@ -309,7 +324,7 @@ module fp_adder(input logic           clk,
           // OVERFLOW: SR the hidden bit
           if (sum[24]) begin
             $display("NORMALIZE: sum[24] - OVERFLOW");
-            z_m <= sum[24:1];
+            // z_m <= sum[24:1];
             z_e <= larger_e + 1;
           end else begin
             // NO OVERFLOW
@@ -336,11 +351,12 @@ module fp_adder(input logic           clk,
               z_e <= 10'b0;
             end
           end
-          adder_stage <= ROUND2;
+          adder_stage <= ROUND;
         end
 
         ROUND: begin
-          $display("guard=%h round=%h sticky=%h", guard, round, sticky);
+          $display("sum=%b, z_s=%b, z_m=%b", sum, z_s, z_m);
+          $display("guard=%b round=%b sticky=%b", guard, round, sticky);
           $display("z_m=%b z_e=%b z_s=%b", z_m, z_e, z_s);
           $display("sum=%b", sum);
           $display("");
@@ -352,23 +368,29 @@ module fp_adder(input logic           clk,
           adder_stage <= ROUND2;
         end
         ROUND2: begin
+          $display("sum=%b, z_s=%b, z_m=%b", sum, z_s, z_m);
           $display("guard=%h round=%h sticky=%h", guard, round, sticky);
           $display("\nROUND2");
           // Perform rounding based on the guard, round, and sticky bits
           if (guard && (round | sticky | z_m[0])) begin
-            z_m <= z_m[24:1] + 1;
-            if (z_m[24]) begin
+            z_m <= z_m + 1;
+            if (z_m == 24'hffffff) begin
               // Rounding caused overflow: shift right and increment exponent
-              z_m <= z_m[24:1];
+              // z_m <= z_m[24:1];
               z_e <= z_e + 1;
             end
           end else begin
             // No rounding needed, just truncate the mantissa
-            z_m <= z_m[24:1];
+            $display("no rounding needed");
+            // z_m <= z_m[24:1];
           end
           adder_stage <= SPECIAL_CASE;
         end
         SPECIAL_CASE: begin
+          $display("guard=%b round=%b sticky=%b", guard, round, sticky);
+          $display("z_m=%b z_e=%b z_s=%b", z_m, z_e, z_s);
+          $display("sum=%b", sum);
+          $display("SPECIAL_CASE");
           z[22:0] <= z_m[22:0];
           z[30:23] <= z_e[7:0] + 127;
           z[31] <= z_s;
@@ -387,6 +409,10 @@ module fp_adder(input logic           clk,
           adder_stage <= READY;
         end
         READY: begin
+          $display("guard=%b round=%b sticky=%b", guard, round, sticky);
+          $display("z_m=%b z_e=%b z_s=%b", z_m, z_e, z_s);
+          $display("sum=%b", sum);
+          $display("");
           $display("READY: result <= %h", z);
           done        <= 1;
           result     <= z;
