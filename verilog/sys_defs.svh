@@ -243,10 +243,14 @@ typedef union packed {
  * Data exchanged from the IF to the ID stage
  */
 typedef struct packed {
-    INST              inst;
-    logic [`XLEN-1:0] PC;
-    logic [`XLEN-1:0] NPC; // PC + 4
-    logic             valid;
+    INST inst1;
+    INST inst2;
+    logic [`XLEN-1:0] PC1;
+    logic [`XLEN-1:0] PC2;
+    logic [`XLEN-1:0] NPC1;
+    logic [`XLEN-1:0] NPC2;
+    logic valid1;
+    logic valid2;
 } IF_ID_PACKET;
 
 /**
@@ -254,27 +258,44 @@ typedef struct packed {
  * Data exchanged from the ID to the EX stage
  */
 typedef struct packed {
-    INST              inst;
-    logic [`XLEN-1:0] PC;
-    logic [`XLEN-1:0] NPC; // PC + 4
+    INST              inst1;
+    INST              inst2;
+    logic [`XLEN-1:0] PC1;
+    logic [`XLEN-1:0] NPC1; // instruction 1's next PC, i.e., PC + 4
+    logic [`XLEN-1:0] PC2;
+    logic [`XLEN-1:0] NPC2; // instruction 2's next PC
 
-    logic [`XLEN-1:0] rs1_value; // reg A value
-    logic [`XLEN-1:0] rs2_value; // reg B value
+    logic [`XLEN-1:0] rs1_value_1; // instruction 1:  reg A value
+    logic [`XLEN-1:0] rs2_value_1; //                 reg B value
+    logic [`XLEN-1:0] rs1_value_2; // instruction 2:  reg A value
+    logic [`XLEN-1:0] rs2_value_2; //                 reg B value
 
-    ALU_OPA_SELECT opa_select; // ALU opa mux select (ALU_OPA_xxx *)
-    ALU_OPB_SELECT opb_select; // ALU opb mux select (ALU_OPB_xxx *)
+    ALU_OPA_SELECT opa_select_1;  // instruction 1:  ALU opa mux select (ALU_OPA_xxx *)
+    ALU_OPB_SELECT opb_select_1;  //                 ALU opb mux select (ALU_OPB_xxx *)
+    ALU_OPA_SELECT opa_select_2;  // instruction 2:  ALU opa mux select (ALU_OPA_xxx *)
+    ALU_OPB_SELECT opb_select_2;  //                 ALU opb mux select (ALU_OPB_xxx *)
 
-    logic [4:0] dest_reg_idx;  // destination (writeback) register index
-    ALU_FUNC    alu_func;      // ALU function select (ALU_xxx *)
-    logic       rd_mem;        // Does inst read memory?
-    logic       wr_mem;        // Does inst write memory?
-    logic       cond_branch;   // Is inst a conditional branch?
-    logic       uncond_branch; // Is inst an unconditional branch?
-    logic       halt;          // Is this a halt?
-    logic       illegal;       // Is this instruction illegal?
-    logic       csr_op;        // Is this a CSR operation? (we only used this as a cheap way to get return code)
+    logic [4:0] dest_reg_idx_1;   // instruction 1: destination (WB) register index
+    logic [4:0] dest_reg_idx_2;   // instruction 2
+    ALU_FUNC alu_func_1;          // instruction 1: ALU function select (ALU_xxx *)
+    ALU_FUNC alu_func_2;
+    logic rd_mem_1;               // Does instruction 1 read memory?
+    logic wr_mem_1;               // Does instruction 1 write memory?
+    logic rd_mem_2;
+    logic wr_mem_2;
+    logic cond_branch_1;          // Is instruction 1 a conditional branch?
+    logic uncond_branch_1;        // Is instruction 1 an unconditional branch?
+    logic cond_branch_2;
+    logic uncond_branch_2;
+    logic halt_1;                 // Is instruction 1 a halt?
+    logic halt_2;
+    logic illegal_1;              // Is instruction 1 illegal?
+    logic illegal_2;
+    logic csr_op_1;               // Is this a CSR operation? (we only used this as a cheap way to get return code)
+    logic csr_op_2;
 
-    logic       valid;
+    logic valid1;
+    logic valid2;
 } ID_EX_PACKET;
 
 /**
