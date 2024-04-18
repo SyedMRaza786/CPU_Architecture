@@ -1,4 +1,4 @@
-module four_bit_carry_lookahead_adder_tb;
+module carry_lookahead_adder_4bit_tb;
 
 logic clk;
 logic rst_n;
@@ -9,7 +9,7 @@ logic [3:0] partial_sum;
 logic carry_out;
 logic done;
 
-four_bit_carry_lookahead_adder dut (
+carry_lookahead_adder_4bit dut (
     .clk(clk),
     .rst_n(rst_n),
     .a(a),
