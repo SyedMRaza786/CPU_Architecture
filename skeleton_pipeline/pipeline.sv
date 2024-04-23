@@ -341,6 +341,7 @@ module pipeline (
 	.done  (done_alu)
     );
 
+    /* TODO: update any MUL* instruction instances within the pipeline */
     multiplier multiplier_0 (
         // Input
 	.valid (ml1_valid),
@@ -508,6 +509,7 @@ module pipeline (
     //////////////////////////////////////////////////
     //                                              //
     //           MEM/WB Pipeline Register           //
+    //               DO NOT CHANGE                  //
     //                                              //
     //////////////////////////////////////////////////
 
@@ -531,7 +533,7 @@ module pipeline (
 	        value_tag       <= cdb_register;
 		value_valid     <= 1;
 	    end else begin
-		value_valid     <= 0;    
+		value_valid     <= 0;
 	    end
             if(valid_cdb_out == 5'b00001) begin
 		temp_mem_wb_reg <= mem_packet_alu;
