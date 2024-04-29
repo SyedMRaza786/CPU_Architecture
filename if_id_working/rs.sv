@@ -296,8 +296,23 @@ module rs (
 		end
 	
 	    end
-	end // if not reset
-    
-   //end //always
+        $display("RS Contents:");
+        for (int i = 0; i < 5; i++) begin
+            $display("Entry %d:", i);
+            $display("  Busy: %b", out.busy_signal[i]);
+            $display("  Opcode: %b", out.out_opcode[i]);
+            $display("  Dest Tag: %d", out.T[i]);
+            $display("  Tag1: %d", out.T1[i]);
+            $display("  Tag2: %d", out.T2[i]);
+            $display("  Value1: %d", out.V1[i]);
+            $display("  Value2: %d", out.V2[i]);
+            $display("  Instruction: %p", out.inst[i]);
+        end
+        $display("Map Table:");
+        for (int i = 0; i < 32; i++) begin
+            $display("  Register %d: %d", i, out.map_table[i]);
+        end
+        $display("------------------------");
+	end // always_ff
 
 endmodule 
