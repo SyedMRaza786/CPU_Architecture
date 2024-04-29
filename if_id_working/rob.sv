@@ -52,7 +52,7 @@ module rob (
     
 
     logic [2:0] temp_tail;
-    always_ff @(negedge clock) begin
+    always_ff @(posedge clock) begin
 /*
         out.buffer_full = rob_table.buffer_full;
         out.buffer_completed = rob_table.buffer_completed;
@@ -203,5 +203,17 @@ module rob (
 
 
 	    end
+        $display("ROB Contents:");
+        $display("Head: %d, Tail: %d, Buffer Full: %d, Buffer Completed: %d", out.head, out.tail, out.buffer_full, out.buffer_completed);
+        for (int i = 0; i < 8; i++) begin
+            $display("Entry %d:", i);
+            $display("  Opcode: %b", out.opcodes[i]);
+            $display("  Input Register 1: %d", out.input_reg_1s[i]);
+            $display("  Input Register 2: %d", out.input_reg_2s[i]);
+            $display("  Destination Register: %d", out.Rs[i]);
+            $display("  Value: %d", out.Vs[i]);
+            $display("  ID_EX_PACKET: %p", out.id_packet[i]);
+        end
+        $display("------------------------");
    end //ALWAYS
 endmodule 
