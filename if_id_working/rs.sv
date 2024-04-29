@@ -16,10 +16,11 @@
 // `define ST  3'b011
 // `define FP  3'b100
 typedef enum logic [2:0] {
-    ALU = 3'b001,
-    LD  = 3'b010,
-    ST  = 3'b011,
-    FP  = 3'b100
+    ALU = 3'b000,
+    M1  = 3'b001,
+    // M2 = 3'b010,
+    LD_ST  = 3'b011,
+    BR  = 3'b100,
 } Opcode;
 
 
