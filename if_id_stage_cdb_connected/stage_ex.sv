@@ -166,8 +166,7 @@ always_ff @(posedge clock) begin
 		    OPB_IS_J_IMM: opb_mux_out <= `RV32_signext_Jimm(id_ex_reg.inst);
 		    default:      opb_mux_out <= `XLEN'hfacefeed; // face feed
 		endcase
-	end
-
+	end else done <= 1'b0;
     end
 $display("valid%b, reset%b, num%d, tag%d",valid, reset, ROB_num, cdb_tag);
 end

@@ -64,7 +64,6 @@ module cdb (
             cdb_clear_branch = 1;
             valid_cdb_out = 1;
 	end else if(done_load_store) begin
-	    $display("YYYYYYYYYYYYYYYKJNKJNDKJANSDJKSNADKJNASKJDNKJNDKJSANDJNAKSNDKASNDKASJNDKSANDKSANDKSJANDKAS");
 	    cdb_tag = cdb_tag_load_store;
 	    cdb_value = cdb_val_load_store.result;
 	    cdb_clear_load_store = 1; 

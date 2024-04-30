@@ -210,8 +210,8 @@ task process_instr(
 		    out.T1[idx] <= rs_table.map_table[input_reg_1];
 		    out.T2[idx] <= rs_table.map_table[input_reg_2];
 		    out.id_packet[idx] <= id_packet;
-		    exec_run[idx] <= 1;
-		    //exec_run[idx] <= ((rs_table.map_table[input_reg_1] == 0 || rs_table.map_table[input_reg_1][0] == 1) && (rs_table.map_table[input_reg_2] == 0 || rs_table.map_table[input_reg_2][0] == 1) && exec_busy[idx] == 0);
+		    //exec_run[idx] <= 1;
+		    exec_run[idx] <= ((rs_table.map_table[input_reg_1] == 0 || rs_table.map_table[input_reg_1][0] == 1) && (rs_table.map_table[input_reg_2] == 0 || rs_table.map_table[input_reg_2][0] == 1) && exec_busy[idx] == 0);
 		end else if(idx == 4 && rs_table.busy_signal[5] == 0) begin
 		    out.inst[5] <= inst;
 		    out.busy_signal[5] <= 1;
@@ -225,7 +225,7 @@ task process_instr(
 		    out.T2[5] <= rs_table.map_table[input_reg_2];
 		    out.id_packet[5] <= id_packet;
 		    exec_run[idx] <= 1;
-		    //exec_run[5] <= (rs_table.map_table[input_reg_1] == 0 || rs_table.map_table[input_reg_1][0] == 1) && (rs_table.map_table[input_reg_2] == 0 || rs_table.map_table[input_reg_2][0] == 1) && exec_busy[5] == 0;
+		    exec_run[5] <= (rs_table.map_table[input_reg_1] == 0 || rs_table.map_table[input_reg_1][0] == 1) && (rs_table.map_table[input_reg_2] == 0 || rs_table.map_table[input_reg_2][0] == 1) && exec_busy[5] == 0;
 
 		end
 	
@@ -256,7 +256,7 @@ task process_other_instr(
         out.T2[idx] <= rs_table.map_table[input_reg_2];
         out.id_packet[idx] <= id_packet;
 	exec_run[idx] <= 1;
-        //exec_run[idx] <= (rs_table.map_table[input_reg_1] == 0 || rs_table.map_table[input_reg_1][0] == 1) && (rs_table.map_table[input_reg_2] == 0 || rs_table.map_table[input_reg_2][0] == 1) && exec_busy[idx] == 0;
+        exec_run[idx] <= (rs_table.map_table[input_reg_1] == 0 || rs_table.map_table[input_reg_1][0] == 1) && (rs_table.map_table[input_reg_2] == 0 || rs_table.map_table[input_reg_2][0] == 1) && exec_busy[idx] == 0;
     end
 endtask
 

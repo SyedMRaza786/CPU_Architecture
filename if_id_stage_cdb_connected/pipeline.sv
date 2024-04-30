@@ -692,6 +692,10 @@ module pipeline (
             mem_wb_reg_mt2      <= mem_packet_mult1;
             mem_wb_reg_br      <= mem_packet_branch;
 	    if(valid_cdb_out) begin
+		$display("YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY");
+		$display("TAG = %d", cdb_tag);
+		$display("VAL = %d", cdb_val);
+
 	        cdb_tag         <= cdb_reg;
 	        cdb_val         <= cdb_val_res;
 	        value_rob       <= cdb_val_res;
