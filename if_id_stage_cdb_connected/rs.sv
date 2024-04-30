@@ -101,6 +101,7 @@ module rs (
 */
 	    $display("rs.sv: exec_run=%b", exec_run);
 	    $display("rs.sv: busy_signal=%b %b", rs_table.busy_signal, out.busy_signal);
+	    $display("rs.sv: exec_busy %b", exec_busy);
         if (reset) begin
 			exec_run = 5'b0;
             for (int i = 0; i < `RS_SIZE; i++) begin
@@ -130,7 +131,7 @@ module rs (
             endcase
         end 
             for (int i = 0; i <= `RS_SIZE; i++) begin
-                if ((rs_table.map_table[input_reg_1] == 0 || rs_table.map_table[input_reg_1][0] == 1) && (rs_table.map_table[input_reg_2] == 0 || rs_table.map_table[input_reg_2][0] == 1) && exec_busy[i] == 0) begin
+                if ((rs_table.map_table[rs_table.id_packet[i].inst.r.rs1] == 0 || rs_table.map_table[rs_table.id_packet[i].inst.r.rs1][0] == 1) && (rs_table.map_table[rs_table.id_packet[i].inst.r.rs2] == 0 || rs_table.map_table[rs_table.id_packet[i].inst.r.rs2][0] == 1) && exec_busy[i] == 0) begin
                     out.busy_signal[i] <= 0;
                     out.out_opcode[i] <= 0;
                     out.T[i] <= 0;

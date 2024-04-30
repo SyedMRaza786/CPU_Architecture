@@ -192,6 +192,7 @@ module pipeline (
     assign if_id_enable = 1'b1; // always enabled
     // synopsys sync_set_reset "reset"
     always_ff @(posedge clock) begin
+	$display("NEXT-IF-VALID %b, ROB_VALID %b, RS_VALID %b", next_if_valid, rob_valid, rs_valid);
         if (reset) begin
             if_id_reg.inst  <= `NOP;
             if_id_reg.valid <= `FALSE;
@@ -199,8 +200,8 @@ module pipeline (
             if_id_reg.PC    <= 0;
             next_if_valid <= 1;
         end else if (if_id_enable) begin
-	    //if(((rob_table.tail+1) != rob_table.head) && (rob_table.head != 1 || rob_table.tail != 7)) begin
-	      if(rob_table.buffer_full == 0) begin
+	    if(((rob_table.tail+2) != rob_table.head) && (rob_table.head != 1 || rob_table.tail != 6)) begin
+	      //if(rob_table.buffer_full == 0) begin
 	        if(current_opcode == 3'b001 && rs_table.busy_signal[1] == 1) begin //ALU
 		    if_id_reg <= if_id_reg;
          	    //next_if_valid <= 1;
@@ -315,8 +316,8 @@ module pipeline (
                 1'b0  // valid
             };
         end else if (id_ex_enable) begin
-	    //if(((rob_table.tail+1) != rob_table.head) && (rob_table.head != 1 || rob_table.tail != 7)) begin
-	      if(rob_table.buffer_full == 0) begin
+	    if(((rob_table.tail+2) != rob_table.head) && (rob_table.head != 1 || rob_table.tail != 6)) begin
+	      //if(rob_table.buffer_full == 0) begin
 	        if(current_opcode == 3'b001 && rs_table.busy_signal[1] == 1) begin
 		    id_ex_reg <= id_ex_reg;
 		    rob_valid <= 0;
@@ -398,8 +399,9 @@ module pipeline (
     		.dest_reg(id_packet.inst.r.rd), .done_signal(rs_done_signal), .value_1(id_packet.rs1_value), .value_2(id_packet.rs2_value), 
     		.rs_table(rs_table), .out(rs_table), .ready_in_rob_valid(ready_in_rob_valid), .ready_in_rob_register(ready_in_rob_register), 
 		.ready_rob_num(ready_rob_num), .retire(retire), .retire_register(retire_register), .retire_rob_number(retire_rob_number),.id_packet(id_packet),
-		.exec_busy({0, !cdb_clear_alu, !cdb_clear_load_store, !cdb_clear_branch, !cdb_clear_mult0, !cdb_clear_mult1}), .exec_run(run_exec)
+		.exec_busy({!cdb_clear_mult1, !cdb_clear_mult0, !cdb_clear_branch, !cdb_clear_load_store, !cdb_clear_alu, 0}), .exec_run(run_exec)
 		//.exec_busy(busy_custom), .exec_run(run_exec)
+		//.exec_busy(6'b0), .exec_run(run_exec)
 	     );
 
 
