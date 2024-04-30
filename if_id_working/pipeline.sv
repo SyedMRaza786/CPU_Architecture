@@ -57,13 +57,13 @@ module pipeline (
     output logic             ex_mem_valid_dbg,
     output logic [`XLEN-1:0] mem_wb_NPC_dbg,
     output logic [31:0]      mem_wb_inst_dbg,
-    output logic             mem_wb_valid_dbg,
-    output IF_ID_PACKET      if_packet,
-    output ROB               rob_table,
-    output RS                rs_table,
-    output logic [2:0]       current_opcode,
-    output logic             next_if_valid,
-    output logic             rob_valid, rs_valid
+    output logic             mem_wb_valid_dbg
+    //output IF_ID_PACKET      if_packet,
+    //output ROB               rob_table,
+    //output RS                rs_table,
+    //output logic [2:0]       current_opcode,
+    //output logic             next_if_valid,
+    //output logic             rob_valid, rs_valid
    
 );
 
@@ -80,8 +80,8 @@ module pipeline (
 
     // Outputs from IF-Stage and IF/ID Pipeline Register
     logic [`XLEN-1:0] proc2Imem_addr;
-    //IF_ID_PACKET if_packet, if_id_reg;
-    IF_ID_PACKET if_id_reg;
+    IF_ID_PACKET if_packet, if_id_reg;
+    //IF_ID_PACKET if_id_reg;
 
     // Outputs from ID stage and ID/EX Pipeline Register
     ID_EX_PACKET id_packet, id_ex_reg;
@@ -102,7 +102,7 @@ module pipeline (
     logic             wb_regfile_en;
     logic [4:0]       wb_regfile_idx;
     logic [`XLEN-1:0] wb_regfile_data;
-    //logic [2:0]       current_opcode;
+    logic [2:0]       current_opcode;
 
 //other definitions
     logic [31:0] cdb_tag, value_rob;
@@ -142,12 +142,12 @@ module pipeline (
     // to stall until the previous instruction has completed.
     // For project 3, start by setting this to always be 1
 
-    //logic next_if_valid;
+    logic next_if_valid;
     decoder decoder_0(.inst(if_packet.inst), .valid(next_if_valid), .opcode(current_opcode));
     logic value_valid, rob_valid, rs_valid, alu_valid, ml1_valid, ml2_valid, ldst_valid, br_valid, commit_rob , ROB_complete;
     logic [2:0] value_tag;
-    //ROB rob_table;
-    //RS  rs_table;
+    ROB rob_table;
+    RS  rs_table;
     logic [4:0] valid_cdb_out;
 
     //////////////////////////////////////////////////
@@ -201,12 +201,12 @@ module pipeline (
         end else if (if_id_enable) begin
 	    //if(((rob_table.tail+1) != rob_table.head) && (rob_table.head != 1 || rob_table.tail != 7)) begin
 	      if(rob_table.buffer_full == 0) begin
-	        if(current_opcode == 3'b000 && rs_table.busy_signal[0] == 1) begin
+	        if(current_opcode == 3'b001 && rs_table.busy_signal[0] == 1) begin
 		    if_id_reg <= if_id_reg;
          	    //next_if_valid <= 1;
 		    next_if_valid <= 0;
 
-		end else if(current_opcode == 3'b001 && rs_table.busy_signal[3] == 1 && rs_table.busy_signal[4] == 1) begin
+		end else if(current_opcode == 3'b010 && rs_table.busy_signal[3] == 1 && rs_table.busy_signal[4] == 1) begin
 		    if_id_reg <= if_id_reg;
          	    //next_if_valid <= 1;
 		    next_if_valid <= 0;
@@ -316,11 +316,11 @@ module pipeline (
         end else if (id_ex_enable) begin
 	    //if(((rob_table.tail+1) != rob_table.head) && (rob_table.head != 1 || rob_table.tail != 7)) begin
 	      if(rob_table.buffer_full == 0) begin
-	        if(current_opcode == 3'b000 && rs_table.busy_signal[0] == 1) begin
+	        if(current_opcode == 3'b001 && rs_table.busy_signal[0] == 1) begin
 		    id_ex_reg <= id_ex_reg;
 		    rob_valid <= 0;
             	    rs_valid  <= 0;
-		end else if(current_opcode == 3'b001 && rs_table.busy_signal[3] == 1 && rs_table.busy_signal[4] == 1) begin
+		end else if(current_opcode == 3'b010 && rs_table.busy_signal[3] == 1 && rs_table.busy_signal[4] == 1) begin
 		    id_ex_reg <= id_ex_reg;
 		    rob_valid <= 0;
             	    rs_valid  <= 0;

@@ -8,7 +8,7 @@
 //                                                                     //
 /////////////////////////////////////////////////////////////////////////
 `timescale 1ns / 1ps
-`include "sys_defs.svh"
+`include "verilog/sys_defs.svh"
 `define XLEN  32
 `define RS_SIZE 5
 // `define ALU 3'b001
@@ -16,11 +16,11 @@
 // `define ST  3'b011
 // `define FP  3'b100
 typedef enum logic [2:0] {
-    ALU = 3'b000,
-    M1  = 3'b001,
+    ALU = 3'b001,
+    M1  = 3'b010,
     // M2 = 3'b010,
     LD_ST  = 3'b011,
-    BR  = 3'b100,
+    BR  = 3'b100
 } Opcode;
 
 
@@ -72,7 +72,7 @@ module rs (
     //logic[`XLEN-1:0] value_1, value_2; 
     //logic[31:0]      map_table[31:0];
 //    logic [2:0] try_code = `LD;
-  Opcode try_code = LD;
+  //Opcode try_code = LD;
 
 /*
     regfile regfile_0 (
@@ -119,11 +119,11 @@ module rs (
             out = rs_table;
             out.map_table[dest_reg] <= ROB_number;
             case (opcode) // dispatch on opcode
-                ALU: process_instr(0, inst, value_1, value_2, id_packet, exec_busy, opcode, input_reg_1, input_reg_2, ROB_number);
-                LD:  process_instr(1, inst, value_1, value_2, id_packet, exec_busy, opcode, input_reg_1, input_reg_2, ROB_number);
-                ST:  process_instr(2, inst, value_1, value_2, id_packet, exec_busy, opcode, input_reg_1, input_reg_2, ROB_number);
-                FP:  process_instr(3, inst, value_1, value_2, id_packet, exec_busy, opcode, input_reg_1, input_reg_2, ROB_number);
-                default: process_other_instr(4, inst, value_1, value_2, id_packet, exec_busy, opcode, input_reg_1, input_reg_2, ROB_number);
+                ALU: process_instr(1, inst, value_1, value_2, id_packet, exec_busy, opcode, input_reg_1, input_reg_2, ROB_number);
+                M1:  process_instr(2, inst, value_1, value_2, id_packet, exec_busy, opcode, input_reg_1, input_reg_2, ROB_number);
+                LD_ST:  process_instr(3, inst, value_1, value_2, id_packet, exec_busy, opcode, input_reg_1, input_reg_2, ROB_number);
+                BR:  process_instr(4, inst, value_1, value_2, id_packet, exec_busy, opcode, input_reg_1, input_reg_2, ROB_number);
+                default: process_other_instr(0, inst, value_1, value_2, id_packet, exec_busy, opcode, input_reg_1, input_reg_2, ROB_number);
             endcase
         end else begin
             for (int i = 0; i <= `RS_SIZE; i++) begin

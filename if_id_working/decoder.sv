@@ -44,73 +44,73 @@ module decoder (
 		    opcode = 3'b011;
                 end
                 `RV32_ADDI: begin
-		    opcode = 3'b000;
-                end
-                `RV32_SLTI: begin
-		    opcode = 3'b000;
-                end
-                `RV32_SLTIU: begin
-		    opcode = 3'b000;
-                end
-                `RV32_ANDI: begin
-		    opcode = 3'b000;
-                end
-                `RV32_ORI: begin
-		    opcode = 3'b000;
-                end
-                `RV32_XORI: begin
-		    opcode = 3'b000;
-                end
-                `RV32_SLLI: begin
-		    opcode = 3'b000;
-                end
-                `RV32_SRLI: begin
-		    opcode = 3'b000;
-                end
-                `RV32_SRAI: begin
-		    opcode = 3'b000;
-                end
-                `RV32_ADD: begin
-                    opcode = 3'b000;
-                end
-                `RV32_SUB: begin
-		    opcode = 3'b000;
-                end
-                `RV32_SLT: begin
-		    opcode = 3'b000;
-                end
-                `RV32_SLTU: begin
-		    opcode = 3'b000;
-                end
-                `RV32_AND: begin
-		    opcode = 3'b000;
-                end
-                `RV32_OR: begin
-		    opcode = 3'b000;
-                end
-                `RV32_XOR: begin
-		    opcode = 3'b000;
-                end
-                `RV32_SLL: begin
-		    opcode = 3'b000;
-                end
-                `RV32_SRL: begin
-		    opcode = 3'b000;
-                end
-                `RV32_SRA: begin
-		    opcode = 3'b000;
-                end
-                `RV32_MUL: begin
 		    opcode = 3'b001;
                 end
+                `RV32_SLTI: begin
+		    opcode = 3'b001;
+                end
+                `RV32_SLTIU: begin
+		    opcode = 3'b001;
+                end
+                `RV32_ANDI: begin
+		    opcode = 3'b001;
+                end
+                `RV32_ORI: begin
+		    opcode = 3'b001;
+                end
+                `RV32_XORI: begin
+		    opcode = 3'b001;
+                end
+                `RV32_SLLI: begin
+		    opcode = 3'b001;
+                end
+                `RV32_SRLI: begin
+		    opcode = 3'b001;
+                end
+                `RV32_SRAI: begin
+		    opcode = 3'b001;
+                end
+                `RV32_ADD: begin
+                    opcode = 3'b001;
+                end
+                `RV32_SUB: begin
+		    opcode = 3'b001;
+                end
+                `RV32_SLT: begin
+		    opcode = 3'b001;
+                end
+                `RV32_SLTU: begin
+		    opcode = 3'b001;
+                end
+                `RV32_AND: begin
+		    opcode = 3'b001;
+                end
+                `RV32_OR: begin
+		    opcode = 3'b001;
+                end
+                `RV32_XOR: begin
+		    opcode = 3'b001;
+                end
+                `RV32_SLL: begin
+		    opcode = 3'b001;
+                end
+                `RV32_SRL: begin
+		    opcode = 3'b001;
+                end
+                `RV32_SRA: begin
+		    opcode = 3'b001;
+                end
+                `RV32_MUL: begin
+		    opcode = 3'b010;
+                end
                 `RV32_MULH: begin
-		    opcode = 3'b000;
+		    opcode = 3'b010;
                 end
                 `RV32_MULHSU: begin
-		    opcode = 3'b000;
+		    opcode = 3'b010;
                 end
                 `RV32_MULHU: begin
-		    opcode = 3'b000;
+		    opcode = 3'b010;
                 end
                 `RV32_CSRRW, `RV32_CSRRS, `RV32_CSRRC: begin
                     opcode = 3'b100;
