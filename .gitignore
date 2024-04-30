@@ -1,0 +1,52 @@
+############################
+# SystemVerilog .gitignore #
+############################
+
+!*.sv
+!*.svh
+!*.c
+!*.s
+
+# compiled sim dirs
+simv*
+csrc
+*.key
+*.vpd
+*.vcd
+*.wlf
+*.log
+*.dsn
+*.trn
+
+# dirs created by Synopsys
+*.o
+*.svcf
+*.diag
+*.bak
+*.db
+*.chk
+*.dsn
+*.mra
+*.svf
+*.tmp
+*.log
+inter.vpd
+fsdb*.gz
+
+vsim.wlf
+*._info
+modelsim.ini
+
+# temporary files
+*.tmp
+*.old
+*.bak
+*.BAK
+
+# other files
+*.DS_Store
+*.history
+*.swo
+*.swp
+*.swn
+*.swm
