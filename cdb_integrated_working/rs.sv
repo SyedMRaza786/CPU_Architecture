@@ -133,12 +133,12 @@ module rs (
             for (int i = 0; i <= `RS_SIZE; i++) begin
                 if ((rs_table.map_table[rs_table.id_packet[i].inst.r.rs1] == 0 || rs_table.map_table[rs_table.id_packet[i].inst.r.rs1][0] == 1) && (rs_table.map_table[rs_table.id_packet[i].inst.r.rs2] == 0 || rs_table.map_table[rs_table.id_packet[i].inst.r.rs2][0] == 1) && exec_busy[i] == 0) begin
                     out.busy_signal[i] <= 0;
-                    out.out_opcode[i] <= 0;
-                    out.T[i] <= 0;
-                    out.T1[i] <= 0;
-                    out.T2[i] <= 0;
-                    out.V1[i] <= 0;
-                    out.V2[i] <= 0;
+                    //out.out_opcode[i] <= 0;
+                    //out.T[i] <= 0;
+                    //out.T1[i] <= 0;
+                    //out.T2[i] <= 0;
+                    //out.V1[i] <= 0;
+                    //out.V2[i] <= 0;
                 end // done
             end // for loop
 
@@ -166,7 +166,7 @@ module rs (
             end // squash
 	    end // else: ~reset
         $display("RS Contents:");
-        for (int i = 0; i < 5; i++) begin
+        for (int i = 0; i < 6; i++) begin
             $display("Entry %d:", i);
             $display("  Busy: %b, Op: %b, T: %d, T1: %d, T2: %d, V1: %d, V2: %d", out.busy_signal[i], out.out_opcode[i], out.T[i], out.T1[i], out.T2[i], out.V1[i], out.V2[i]);
             $display("  Instruction: %p", out.inst[i]);

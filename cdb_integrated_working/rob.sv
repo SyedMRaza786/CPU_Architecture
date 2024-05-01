@@ -208,7 +208,7 @@ module rob (
         for (int i = 0; i < 8; i++) begin
             $display("Entry %d:", i);
             $display("  Op: %b, I1: %d, I2: %d, D: %d, V: %d", out.opcodes[i], out.input_reg_1s[i], out.input_reg_2s[i], out.Rs[i], out.Vs[i]);
-            $display("  ID_EX_PACKET: %p", out.id_packet[i]);
+            //$display("  ID_EX_PACKET: %p", out.id_packet[i]);
         end
         $display("------------------------");
    end //ALWAYS

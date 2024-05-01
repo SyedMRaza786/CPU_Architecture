@@ -383,7 +383,7 @@ typedef struct{
     logic[4:0]       input_reg_1s[7:0];
     logic[4:0]       input_reg_2s[7:0];
     logic[4:0]       dest_regs[7:0];
-    logic[4:0]       Rs[7:0];
+    logic[31:0]      Rs[7:0];
     logic[31:0]      Vs[7:0];
     ID_EX_PACKET     id_packet[7:0];
 } ROB;

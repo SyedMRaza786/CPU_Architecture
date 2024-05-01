@@ -697,7 +697,7 @@ module pipeline (
     //                  WB-Stage                    //
     //                                              //
     //////////////////////////////////////////////////
-    /*
+    
     stage_wb stage_wb_0 (
         // Input
         .retire(retire_out),
@@ -725,5 +725,5 @@ module pipeline (
     assign pipeline_commit_wr_idx  = wb_regfile_idx;
     assign pipeline_commit_wr_data = wb_regfile_data;
     assign pipeline_commit_NPC     = mem_wb_reg.NPC;
-*/
+
 endmodule // pipeline
