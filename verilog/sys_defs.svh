@@ -13,6 +13,34 @@
 // all files should `include "sys_defs.svh" to at least define the timescale
 `timescale 1ns/100ps
 
+///////////////////////////////////
+// ---- Starting Parameters ---- //
+///////////////////////////////////
+
+// some starting parameters that you should set
+// this is *your* processor, you decide these values (try analyzing which is best!)
+`define RS_SIZE 6
+// superscalar width
+`define N 1
+
+// sizes
+`define ROB_SZ xx
+`define RS_SZ xx
+`define PHYS_REG_SZ (32 + `ROB_SZ)
+
+// worry about these later
+`define BRANCH_PRED_SZ xx
+`define LSQ_SZ xx
+
+// functional units (you should decide if you want more or fewer types of FUs)
+`define NUM_FU_ALU xx
+`define NUM_FU_MULT xx
+`define NUM_FU_LOAD xx
+`define NUM_FU_STORE xx
+
+// number of mult stages (2, 4, or 8)
+`define MULT_STAGES 4
+
 ///////////////////////////////
 // ---- Basic Constants ---- //
 ///////////////////////////////
@@ -38,15 +66,28 @@
 // ---- Memory Definitions ---- //
 //////////////////////////////////
 
-// this will change for project 4
+// Cache mode removes the byte-level interface from memory, so it always returns
+// a double word. The original processor won't work with this defined. Your new
+// processor will have to account for this effect on mem.
+// Notably, you can no longer write data without first reading.
+`define CACHE_MODE
+
+// you are not allowed to change this definition for your final processor
 // the project 3 processor has a massive boost in performance just from having no mem latency
 // see if you can beat it's CPI in project 4 even with a 100ns latency!
-`define MEM_LATENCY_IN_CYCLES  0
+// `define MEM_LATENCY_IN_CYCLES  0
+`define MEM_LATENCY_IN_CYCLES (100.0/`CLOCK_PERIOD+0.49999)
+// the 0.49999 is to force ceiling(100/period). The default behavior for
+// float to integer conversion is rounding to nearest
 
+// How many memory requests can be waiting at once
 `define NUM_MEM_TAGS 15
 
 `define MEM_SIZE_IN_BYTES (64*1024)
 `define MEM_64BIT_LINES   (`MEM_SIZE_IN_BYTES/8)
+
+
+
 
 typedef union packed {
     logic [7:0][7:0]  byte_level;
@@ -101,51 +142,6 @@ typedef enum logic [3:0] {
     HALTED_ON_WFI       = 4'he, // 'Wait For Interrupt'. In 470, signifies the end of computation
     STORE_PAGE_FAULT    = 4'hf
 } EXCEPTION_CODE;
-
-////////////////////////////////////////
-// ---- Datapath Control Signals ---- //
-////////////////////////////////////////
-
-// ALU opA input mux selects
-typedef enum logic [1:0] {
-    OPA_IS_RS1  = 2'h0,
-    OPA_IS_NPC  = 2'h1,
-    OPA_IS_PC   = 2'h2,
-    OPA_IS_ZERO = 2'h3
-} ALU_OPA_SELECT;
-
-// ALU opB input mux selects
-typedef enum logic [3:0] {
-    OPB_IS_RS2    = 4'h0,
-    OPB_IS_I_IMM  = 4'h1,
-    OPB_IS_S_IMM  = 4'h2,
-    OPB_IS_B_IMM  = 4'h3,
-    OPB_IS_U_IMM  = 4'h4,
-    OPB_IS_J_IMM  = 4'h5
-} ALU_OPB_SELECT;
-
-// ALU function code input
-// probably want to leave these alone
-typedef enum logic [4:0] {
-    ALU_ADD     = 5'h00,
-    ALU_SUB     = 5'h01,
-    ALU_SLT     = 5'h02,
-    ALU_SLTU    = 5'h03,
-    ALU_AND     = 5'h04,
-    ALU_OR      = 5'h05,
-    ALU_XOR     = 5'h06,
-    ALU_SLL     = 5'h07,
-    ALU_SRL     = 5'h08,
-    ALU_SRA     = 5'h09,
-    ALU_MUL     = 5'h0a,
-    ALU_MULH    = 5'h0b,
-    ALU_MULHSU  = 5'h0c,
-    ALU_MULHU   = 5'h0d,
-    ALU_DIV     = 5'h0e,
-    ALU_DIVU    = 5'h0f,
-    ALU_REM     = 5'h10,
-    ALU_REMU    = 5'h11
-} ALU_FUNC;
 
 ///////////////////////////////////
 // ---- Instruction Typedef ---- //
@@ -226,6 +222,50 @@ typedef union packed {
 
 } INST; // instruction typedef, this should cover all types of instructions
 
+////////////////////////////////////////
+// ---- Datapath Control Signals ---- //
+////////////////////////////////////////
+
+// ALU opA input mux selects
+typedef enum logic [1:0] {
+    OPA_IS_RS1  = 2'h0,
+    OPA_IS_NPC  = 2'h1,
+    OPA_IS_PC   = 2'h2,
+    OPA_IS_ZERO = 2'h3
+} ALU_OPA_SELECT;
+
+// ALU opB input mux selects
+typedef enum logic [3:0] {
+    OPB_IS_RS2    = 4'h0,
+    OPB_IS_I_IMM  = 4'h1,
+    OPB_IS_S_IMM  = 4'h2,
+    OPB_IS_B_IMM  = 4'h3,
+    OPB_IS_U_IMM  = 4'h4,
+    OPB_IS_J_IMM  = 4'h5
+} ALU_OPB_SELECT;
+
+// ALU function code input
+// probably want to leave these alone
+typedef enum logic [4:0] {
+    ALU_ADD     = 5'h00,
+    ALU_SUB     = 5'h01,
+    ALU_SLT     = 5'h02,
+    ALU_SLTU    = 5'h03,
+    ALU_AND     = 5'h04,
+    ALU_OR      = 5'h05,
+    ALU_XOR     = 5'h06,
+    ALU_SLL     = 5'h07,
+    ALU_SRL     = 5'h08,
+    ALU_SRA     = 5'h09,
+    ALU_MUL     = 5'h0a, // Mult FU
+    ALU_MULH    = 5'h0b, // Mult FU
+    ALU_MULHSU  = 5'h0c, // Mult FU
+    ALU_MULHU   = 5'h0d, // Mult FU
+    ALU_DIV     = 5'h0e, // unused
+    ALU_DIVU    = 5'h0f, // unused
+    ALU_REM     = 5'h10, // unused
+    ALU_REMU    = 5'h11  // unused
+} ALU_FUNC;
 
 ////////////////////////////////
 // ---- Datapath Packets ---- //
@@ -243,14 +283,10 @@ typedef union packed {
  * Data exchanged from the IF to the ID stage
  */
 typedef struct packed {
-    INST inst1;
-    INST inst2;
-    logic [`XLEN-1:0] PC1;
-    logic [`XLEN-1:0] PC2;
-    logic [`XLEN-1:0] NPC1;
-    logic [`XLEN-1:0] NPC2;
-    logic valid1;
-    logic valid2;
+    INST              inst;
+    logic [`XLEN-1:0] PC;
+    logic [`XLEN-1:0] NPC; // PC + 4
+    logic             valid;
 } IF_ID_PACKET;
 
 /**
@@ -258,44 +294,27 @@ typedef struct packed {
  * Data exchanged from the ID to the EX stage
  */
 typedef struct packed {
-    INST              inst1;
-    INST              inst2;
-    logic [`XLEN-1:0] PC1;
-    logic [`XLEN-1:0] NPC1; // instruction 1's next PC, i.e., PC + 4
-    logic [`XLEN-1:0] PC2;
-    logic [`XLEN-1:0] NPC2; // instruction 2's next PC
+    INST              inst;
+    logic [`XLEN-1:0] PC;
+    logic [`XLEN-1:0] NPC; // PC + 4
 
-    logic [`XLEN-1:0] rs1_value_1; // instruction 1:  reg A value
-    logic [`XLEN-1:0] rs2_value_1; //                 reg B value
-    logic [`XLEN-1:0] rs1_value_2; // instruction 2:  reg A value
-    logic [`XLEN-1:0] rs2_value_2; //                 reg B value
+    logic [`XLEN-1:0] rs1_value; // reg A value
+    logic [`XLEN-1:0] rs2_value; // reg B value
 
-    ALU_OPA_SELECT opa_select_1;  // instruction 1:  ALU opa mux select (ALU_OPA_xxx *)
-    ALU_OPB_SELECT opb_select_1;  //                 ALU opb mux select (ALU_OPB_xxx *)
-    ALU_OPA_SELECT opa_select_2;  // instruction 2:  ALU opa mux select (ALU_OPA_xxx *)
-    ALU_OPB_SELECT opb_select_2;  //                 ALU opb mux select (ALU_OPB_xxx *)
+    ALU_OPA_SELECT opa_select; // ALU opa mux select (ALU_OPA_xxx *)
+    ALU_OPB_SELECT opb_select; // ALU opb mux select (ALU_OPB_xxx *)
 
-    logic [4:0] dest_reg_idx_1;   // instruction 1: destination (WB) register index
-    logic [4:0] dest_reg_idx_2;   // instruction 2
-    ALU_FUNC alu_func_1;          // instruction 1: ALU function select (ALU_xxx *)
-    ALU_FUNC alu_func_2;
-    logic rd_mem_1;               // Does instruction 1 read memory?
-    logic wr_mem_1;               // Does instruction 1 write memory?
-    logic rd_mem_2;
-    logic wr_mem_2;
-    logic cond_branch_1;          // Is instruction 1 a conditional branch?
-    logic uncond_branch_1;        // Is instruction 1 an unconditional branch?
-    logic cond_branch_2;
-    logic uncond_branch_2;
-    logic halt_1;                 // Is instruction 1 a halt?
-    logic halt_2;
-    logic illegal_1;              // Is instruction 1 illegal?
-    logic illegal_2;
-    logic csr_op_1;               // Is this a CSR operation? (we only used this as a cheap way to get return code)
-    logic csr_op_2;
+    logic [4:0] dest_reg_idx;  // destination (writeback) register index
+    ALU_FUNC    alu_func;      // ALU function select (ALU_xxx *)
+    logic       rd_mem;        // Does inst read memory?
+    logic       wr_mem;        // Does inst write memory?
+    logic       cond_branch;   // Is inst a conditional branch?
+    logic       uncond_branch; // Is inst an unconditional branch?
+    logic       halt;          // Is this a halt?
+    logic       illegal;       // Is this instruction illegal?
+    logic       csr_op;        // Is this a CSR operation? (we use this to get return code)
 
-    logic valid1;
-    logic valid2;
+    logic       valid;
 } ID_EX_PACKET;
 
 /**
@@ -339,5 +358,35 @@ typedef struct packed {
 /**
  * No WB output packet as it would be more cumbersome than useful
  */
+typedef struct{
+    
+    logic[`RS_SIZE-1:0]       busy_signal;
+    logic [2:0]      out_opcode[4:0];
+    logic[2:0]      T[4:0];
+    logic[2:0]      T1[4:0];
+    logic [2:0]     T2[4:0];
+    logic[31:0]      V1[4:0];
+    logic [31:0]     V2[4:0];
+    logic[3:0]      map_table[31:0];
+    ID_EX_PACKET       id_packet[4:0];  
+    INST             inst[4:0];
+
+} RS;
+
+typedef struct{
+
+    logic            buffer_full;
+    logic            buffer_completed;
+    logic[3:0]       head;
+    logic[3:0]       tail;
+    logic[2:0]       opcodes[7:0];
+    logic[4:0]       input_reg_1s[7:0];
+    logic[4:0]       input_reg_2s[7:0];
+    logic[4:0]       dest_regs[7:0];
+    logic[31:0]      Rs[7:0];
+    logic[31:0]      Vs[7:0];
+    ID_EX_PACKET     id_packet[7:0];
+} ROB;
+
 
 `endif // __SYS_DEFS_SVH__
