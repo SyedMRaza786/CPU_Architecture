@@ -16,7 +16,7 @@ module stage_mem (
     input EX_MEM_PACKET ex_mem_reg,
     // the BUS_LOAD response will magically be present in the *same* cycle it's requested (0ns latency)
     // this will not be true in project 4 (100ns latency)
-    input [`XLEN-1:0]   Dmem2proc_data,
+    input [`XLEN-1:0]        Dmem2proc_data,
 
     output MEM_WB_PACKET     mem_packet,
     output logic [1:0]       proc2Dmem_command, // The memory command

@@ -136,7 +136,7 @@ module rob (
 
 	    /* To be determined in meeting */
 	    if (value_valid == 1) begin
-		out.Vs [value_tag - 1] <= value;
+		out.Vs [value_tag] <= value;
 		if(value_tag == rob_table.head) begin
 		    retire_out <= 1;
                     if(rob_table.Rs[rob_table.head] != 0) begin

@@ -20,7 +20,7 @@ module cdb (
     input EX_MEM_PACKET cdb_val_alu,
     input EX_MEM_PACKET cdb_val_mult0,
     input EX_MEM_PACKET cdb_val_mult1,
-    input MEM_WB_PACKET cdb_val_load_store,
+    input EX_MEM_PACKET cdb_val_load_store,
     input EX_MEM_PACKET cdb_val_branch,
     output logic [2:0] cdb_tag,
     output logic [`XLEN-1:0] cdb_value,
@@ -40,34 +40,39 @@ module cdb (
         cdb_clear_mult1 <= 0;
         cdb_clear_load_store <= 0;
        // valid_cdb_out = 0;
-	if (done_mult0) begin
+	if(done_load_store) begin
+	    cdb_tag <= cdb_tag_load_store;
+	    cdb_value <= cdb_val_load_store.alu_result;
+	    cdb_clear_load_store <= 1; 
+	    valid_cdb_out <= 1;
+	    $display("LS DONE TAG = %d VAL=%d", cdb_tag_load_store, cdb_val_load_store.alu_result);   
+	end else if (done_mult0) begin
             cdb_tag <= cdb_tag_mult0;
 	    cdb_value  <= cdb_val_mult0.alu_result; 
             cdb_clear_mult0 <= 1;
             valid_cdb_out <= 1;
+	    $display("MULT0 DONE TAG = %d VAL=%d", cdb_tag_mult0, cdb_val_mult0.alu_result);
 	end
 	else if (done_mult1) begin
             cdb_tag <= cdb_tag_mult1;
 	    cdb_value  <= cdb_val_mult1.alu_result; 
             cdb_clear_mult1 <= 1;
             valid_cdb_out <= 1;
+	    $display("MULT1 DONE TAG = %d VAL=%d", cdb_tag_mult1, cdb_val_mult1.alu_result);
 	end
         else if (done_alu) begin
             cdb_tag <= cdb_tag_alu;
 	    cdb_value  <= cdb_val_alu.alu_result;    
 	    cdb_clear_alu <= 1;  
-            valid_cdb_out <= 1;      
+            valid_cdb_out <= 1;
+	    $display("ALU DONE TAG = %d VAL=%d", cdb_tag_alu, cdb_val_alu.alu_result);      
 	end
 	else if (done_branch) begin
             cdb_tag <= cdb_tag_branch;
 	    cdb_value  <= cdb_val_branch.alu_result;
             cdb_clear_branch <= 1;
             valid_cdb_out <= 1;
-	end else if(done_load_store) begin
-	    cdb_tag <= cdb_tag_load_store;
-	    cdb_value <= cdb_val_load_store.result;
-	    cdb_clear_load_store <= 1; 
-	    valid_cdb_out <= 1;
+	    $display("BRANCH DONE TAG = %d VAL=%d", cdb_tag_branch, cdb_val_branch.alu_result);
 	end
 	
     end // always

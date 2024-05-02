@@ -18,6 +18,7 @@
 `include "verilog/stage_wb.sv"
 `include "verilog/decoder.sv"
 `include "verilog/cdb.sv"
+`include "verilog/stage_ls.sv"
 
 module pipeline (
     input                    clock,             // System clock
@@ -76,8 +77,8 @@ module pipeline (
     // Pipeline register enables
     logic if_id_enable, id_ex_enable, ex_mem_enable, mem_wb_enable;
     logic [2:0] cdb_reg,cdb_clear_alu_reg,cdb_clear_alu,cdb_clear_mult0_reg,cdb_clear_mult0,cdb_clear_mult1_reg,cdb_clear_mult1,cdb_clear_load_store_reg,cdb_clear_load_store;
-    logic [`XLEN-1:0] cdb_val;
 
+    logic valid_cdb;
     // Outputs from IF-Stage and IF/ID Pipeline Register
     logic [`XLEN-1:0] proc2Imem_addr;
     IF_ID_PACKET if_packet, if_id_reg;
@@ -142,8 +143,8 @@ module pipeline (
     // to stall until the previous instruction has completed.
     // For project 3, start by setting this to always be 1
 
-    logic next_if_valid;
-    decoder decoder_0(.inst(if_packet.inst), .valid(next_if_valid), .opcode(current_opcode));
+    logic next_if_valid, opcode_valid;
+    decoder decoder_0(.inst(if_id_reg.inst), .valid(opcode_valid), .opcode(current_opcode));
     logic value_valid, rob_valid, rs_valid, alu_valid, ml1_valid, ml2_valid, ldst_valid, br_valid, commit_rob , ROB_complete;
     logic [2:0] value_tag;
     ROB rob_table;
@@ -190,7 +191,9 @@ module pipeline (
     //////////////////////////////////////////////////
 
     assign if_id_enable = 1'b1; // always enabled
-    // synopsys sync_set_reset "reset"
+    assign next_if_valid = reset || (((rob_table.tail+1) != rob_table.head) && (rob_table.head != 1 || rob_table.tail != 7) && !((current_opcode == 3'b001 && rs_table.busy_signal[1] == 1) || (current_opcode == 3'b010 && rs_table.busy_signal[4] == 1 && rs_table.busy_signal[5] == 1) || (current_opcode == 3'b011 && rs_table.busy_signal[2] == 1) || (current_opcode == 3'b100 && rs_table.busy_signal[3] == 1)));
+    assign rob_valid = (((rob_table.tail+1) != rob_table.head) && (rob_table.head != 1 || rob_table.tail != 7) && !((current_opcode == 3'b001 && rs_table.busy_signal[1] == 1) || (current_opcode == 3'b010 && rs_table.busy_signal[4] == 1 && rs_table.busy_signal[5] == 1) || (current_opcode == 3'b011 && rs_table.busy_signal[2] == 1) || (current_opcode == 3'b100 && rs_table.busy_signal[3] == 1)));
+    assign rs_valid = (((rob_table.tail+1) != rob_table.head) && (rob_table.head != 1 || rob_table.tail != 7) && !((current_opcode == 3'b001 && rs_table.busy_signal[1] == 1) || (current_opcode == 3'b010 && rs_table.busy_signal[4] == 1 && rs_table.busy_signal[5] == 1) || (current_opcode == 3'b011 && rs_table.busy_signal[2] == 1) || (current_opcode == 3'b100 && rs_table.busy_signal[3] == 1)));
     always_ff @(posedge clock) begin
 	$display("NEXT-IF-VALID %b, ROB_VALID %b, RS_VALID %b", next_if_valid, rob_valid, rs_valid);
         if (reset) begin
@@ -198,16 +201,21 @@ module pipeline (
             if_id_reg.valid <= `FALSE;
             if_id_reg.NPC   <= 0;
             if_id_reg.PC    <= 0;
-            next_if_valid <= 1;
+            //next_if_valid <= 1;
         end else if (if_id_enable) begin
-	    if(((rob_table.tail+2) != rob_table.head) && (rob_table.head != 1 || rob_table.tail != 6)) begin
+	    //if(((rob_table.tail+1) != rob_table.head) && (rob_table.head != 1 || rob_table.tail != 7)) begin
 	      //if(rob_table.buffer_full == 0) begin
-	        if(current_opcode == 3'b001 && rs_table.busy_signal[1] == 1) begin //ALU
+	        //if(current_opcode == 3'b001 && rs_table.busy_signal[1] == 1) begin //ALU
+		if(!next_if_valid) begin 
 		    if_id_reg <= if_id_reg;
+		    
+		    //rob_valid <= 0;
+		    //rs_valid  <= 0;
+	        //end
          	    //next_if_valid <= 1;
-		    next_if_valid <= 0;
+		    //next_if_valid <= 0;
 
-		end else if(current_opcode == 3'b010 && rs_table.busy_signal[4] == 1 && rs_table.busy_signal[5] == 1) begin //MULT
+		/*end else if(current_opcode == 3'b010 && rs_table.busy_signal[4] == 1 && rs_table.busy_signal[5] == 1) begin //MULT
 		    if_id_reg <= if_id_reg;
          	    //next_if_valid <= 1;
 		    next_if_valid <= 0;
@@ -222,23 +230,29 @@ module pipeline (
 		    next_if_valid <= 0;
 
 		    //next_if_valid <= 1;
-		end else begin
+		end else begin*/
+		 end else begin 
 		    if_id_reg <= if_packet;
+		    opcode_valid <= 1;
+		    //rob_valid <= 1;
+		    //rs_valid  <= 1;
+		  //end
+/*
 		    if ((ex_packet.rd_mem == 1 || ex_packet.wr_mem == 1)) begin
 	                next_if_valid <= 0;
 			//next_if_valid <= 1;
-
+			if_id_reg <= if_id_reg;
 	    	    end else begin
 			next_if_valid <= 1;
-
-		    end
+			if_id_reg <= if_packet;
+		    end*/
 		end
-	    end else begin
-		if_id_reg <= if_id_reg;
+	   // end else begin
+		//if_id_reg <= if_id_reg;
 		//next_if_valid <= 1;
-	        next_if_valid <= 0;
+	        //next_if_valid <= 0;
 
-	    end // else
+	    //end // else
             
         end //else enable
     end //ALWAYS
@@ -316,7 +330,9 @@ module pipeline (
                 1'b0  // valid
             };
         end else if (id_ex_enable) begin
-	    if(((rob_table.tail+2) != rob_table.head) && (rob_table.head != 1 || rob_table.tail != 6)) begin
+	    if(!next_if_valid) id_ex_reg <= id_ex_reg;
+	    else id_ex_reg <= id_packet;
+	    /*if(((rob_table.tail+1) != rob_table.head) && (rob_table.head != 1 || rob_table.tail != 7)) begin
 	      //if(rob_table.buffer_full == 0) begin
 	        if(current_opcode == 3'b001 && rs_table.busy_signal[1] == 1) begin
 		    id_ex_reg <= id_ex_reg;
@@ -344,12 +360,14 @@ module pipeline (
 		id_ex_reg <= id_ex_reg;
 		    rob_valid <= 0;
             	    rs_valid  <= 0;
-	    end
+	    end*/
 
 	
         end
     end
     logic [`RS_SIZE-1:0] run_exec;
+    logic [2:0 ] cdb_unit;
+    logic [31:0] cdb_val;
     // debug outputs
     assign id_ex_NPC_dbg   = id_ex_reg.NPC;
     assign id_ex_inst_dbg  = id_ex_reg.inst;
@@ -363,7 +381,7 @@ module pipeline (
 
 
     
-    rs rs_unit( .clock(clock), .reset(reset), .rs_valid(rs_valid), .cdb_valid(cdb_valid), .cdb_tag(cdb_tag), .cdb_value(cdb_value), .cdb_unit(cdb_unit), 
+    rs rs_unit( .clock(clock), .reset(reset), .rs_valid(rs_valid), .cdb_valid(valid_cdb), .cdb_tag(cdb_tag), .cdb_value(cdb_val), .cdb_unit(cdb_unit), 
     		.opcode(current_opcode), .inst(id_packet.inst), .ROB_number(rob_table.tail), .input_reg_1(id_packet.inst.r.rs1), .input_reg_2(id_packet.inst.r.rs2),
     		.dest_reg(id_packet.inst.r.rd), .done_signal(rs_done_signal), .value_1(id_packet.rs1_value), .value_2(id_packet.rs2_value), 
     		.rs_table(rs_table), .out(rs_table), .ready_in_rob_valid(ready_in_rob_valid), .ready_in_rob_register(ready_in_rob_register), 
@@ -429,7 +447,7 @@ module pipeline (
         .cdb_tag (cdb_tag_mult1)
     );
 
-    stage_ex load_store_0(
+    stage_ls load_store_0(
 	.clock(clock),
 	.reset(reset),
 	.valid (run_exec[2]),
@@ -441,7 +459,12 @@ module pipeline (
 	.done  (done_load_store),
 	//.busy (exec_busy[1]),
 	//.busy (busy_custom),
-        .cdb_tag (cdb_tag_load_store)
+        .cdb_tag (cdb_tag_load_store),
+	.Dmem2proc_data (mem2proc_data[`XLEN-1:0]), // for p3, we throw away the top 32 bits
+        .proc2Dmem_command (proc2Dmem_command),
+        .proc2Dmem_size    (proc2Dmem_size),
+        .proc2Dmem_addr    (proc2Dmem_addr),
+        .proc2Dmem_data    (proc2Dmem_data)
 
     );
 
@@ -469,7 +492,7 @@ module pipeline (
     //                                              //
     //////////////////////////////////////////////////
     logic [2:0] cdb_tag_alu_reg, cdb_tag_mult0_reg, cdb_tag_mult1_reg, cdb_tag_load_store_reg, cdb_tag_branch_reg;
-    logic cdb_done_alu, cdb_done_mult0, cdb_done_mult1, cdb_done_load_store, cdb_done_branch, valid_cdb, valid_cdb_out;
+    logic cdb_done_alu, cdb_done_mult0, cdb_done_mult1, cdb_done_load_store, cdb_done_branch, valid_cdb_out;
     logic [`XLEN-1:0] cdb_val_res;
     assign ex_mem_enable = 1'b1; // always enabled
     // synopsys sync_set_reset "reset"
@@ -487,49 +510,51 @@ module pipeline (
             ex_mem_reg      <= ex_packet;
             valid_cdb <= valid_cdb_out;
 	    if(done_alu) begin
+		$display("to cdb %d", ex_packet_alu.alu_result);
 	        ex_mem_reg_alu  <= ex_packet_alu;
 		cdb_tag_alu_reg <= cdb_tag_alu;
 		cdb_done_alu    <= 1;
 	    end else begin
-		//if(cdb_clear_alu) begin
+		if(cdb_clear_alu) begin
 			cdb_done_alu <= 0;
-		//end
+		end
 	    end
 	    if(done_mult) begin
                 ex_mem_reg_mult0 <= ex_packet_mult0;
 		cdb_tag_mult0_reg <= cdb_tag_mult0;
 		cdb_done_mult0    <= 1;
 	    end else begin
-		//if(cdb_clear_mult0) begin
+		if(cdb_clear_mult0) begin
 			cdb_done_mult0 <= 0;
-		//end
+		end
 	    end
 	    if(done_load_store) begin
+		$display("load to cdb %d", ex_packet_load_store.alu_result);
                 ex_mem_reg_load_store <= ex_packet_load_store;
 		cdb_tag_load_store_reg <= cdb_tag_load_store;
 		cdb_done_load_store    <= 1;
 	    end else begin
-		//if(cdb_clear_load_store) begin
+		if(cdb_clear_load_store) begin
 			cdb_done_load_store <= 0;
-		//end
+		end
 	    end
 	    if(done_mult1) begin
                 ex_mem_reg_mult1 <= ex_packet_mult1;
 		cdb_tag_mult1_reg <= cdb_tag_mult1;
 		cdb_done_mult1 <= 1;
 	    end else begin
-		//if(cdb_clear_mult1) begin
+		if(cdb_clear_mult1) begin
 			cdb_done_mult1 <= 0;
-		//end
+		end
 	    end
 	    if(done_branch) begin
                 ex_mem_reg_branch <= ex_packet_branch;
 		cdb_tag_branch_reg <= cdb_tag_branch;
 		cdb_done_branch    <= 1;
 	    end else begin
-		//if(cdb_clear_branch) begin
-			cdb_done_branch <= 0;
-		//end
+		if(cdb_clear_branch) begin
+		    cdb_done_branch <= 0;
+		end
 	    end
         end
     end
@@ -543,7 +568,7 @@ module pipeline (
     //                 MEM-Stage                    //
     //                                              //
     //////////////////////////////////////////////////
-
+/*
     stage_mem stage_mem_0 (
         // Inputs
         .ex_mem_reg     (ex_mem_reg_load_store),
@@ -608,7 +633,7 @@ module pipeline (
         .proc2Dmem_addr    (proc2Dmem_addr_res),
         .proc2Dmem_data    (proc2Dmem_data_res)
     );
-    
+    */
     cdb cdb_0(
         .done_alu(cdb_done_alu),
 	.done_mult0(cdb_done_mult0),
@@ -626,7 +651,7 @@ module pipeline (
         .cdb_val_alu(ex_mem_reg_alu),
         .cdb_val_mult0(ex_mem_reg_mult0),
         .cdb_val_mult1(ex_mem_reg_mult1),
-        .cdb_val_load_store(mem_packet_ls),
+        .cdb_val_load_store(ex_mem_reg_load_store),
         .cdb_val_branch(ex_mem_reg_branch),
 
 	.cdb_tag(cdb_reg),
@@ -653,12 +678,12 @@ module pipeline (
             mem_wb_inst_dbg <= `NOP; // debug output
             mem_wb_reg      <= 0;    // the defaults can all be zero!
         end else if (mem_wb_enable) begin
-            mem_wb_inst_dbg <= ex_mem_inst_dbg; // debug output, just forwarded from EX
-            mem_wb_reg_ls      <= mem_packet_ls;
-            mem_wb_reg_alu      <= mem_packet_alu;
-            mem_wb_reg_mt1      <= mem_packet_mult0;
-            mem_wb_reg_mt2      <= mem_packet_mult1;
-            mem_wb_reg_br      <= mem_packet_branch;
+            //mem_wb_inst_dbg <= ex_mem_inst_dbg; // debug output, just forwarded from EX
+            //mem_wb_reg_ls      <= mem_packet_ls;
+            //mem_wb_reg_alu      <= mem_packet_alu;
+            //mem_wb_reg_mt1      <= mem_packet_mult0;
+            //mem_wb_reg_mt2      <= mem_packet_mult1;
+            //mem_wb_reg_br      <= mem_packet_branch;
 	    if(valid_cdb) begin
 		$display("CDB TAG:%d CDB_VAL%d", cdb_tag,cdb_val);
 	        cdb_tag         <= cdb_reg;
@@ -667,15 +692,20 @@ module pipeline (
 	        value_tag       <= cdb_reg;
 		value_valid     <= 1;
                 if(cdb_clear_alu) begin
-		    temp_mem_wb_reg <= mem_packet_alu;
+		    //temp_mem_wb_reg <= mem_packet_alu;
+		    cdb_unit <= 1;
 	        end else if(cdb_clear_mult0) begin
-		    temp_mem_wb_reg <= mem_packet_mult0;
+		    //temp_mem_wb_reg <= mem_packet_mult0;
+		    cdb_unit <= 4;
 	        end else if(cdb_clear_mult1) begin
-		    temp_mem_wb_reg <= mem_packet_mult1;
+		    //temp_mem_wb_reg <= mem_packet_mult1;
+		    cdb_unit <= 5;
 	        end else if(cdb_clear_load_store) begin
-		    temp_mem_wb_reg <= mem_packet_ls;
+		    //temp_mem_wb_reg <= mem_packet_ls;
+		    cdb_unit <= 2;
 	        end else if(done_branch) begin
-		    temp_mem_wb_reg <= mem_packet_branch;
+		    //temp_mem_wb_reg <= mem_packet_branch;
+		    cdb_unit <= 3;
 		end
 	    end else begin
 		value_valid     <= 0;    
@@ -697,7 +727,7 @@ module pipeline (
     //                  WB-Stage                    //
     //                                              //
     //////////////////////////////////////////////////
-    
+    /*
     stage_wb stage_wb_0 (
         // Input
         .retire(retire_out),
@@ -725,5 +755,5 @@ module pipeline (
     assign pipeline_commit_wr_idx  = wb_regfile_idx;
     assign pipeline_commit_wr_data = wb_regfile_data;
     assign pipeline_commit_NPC     = mem_wb_reg.NPC;
-
+*/
 endmodule // pipeline

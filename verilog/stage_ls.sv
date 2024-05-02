@@ -15,95 +15,34 @@
 
 // ALU: computes the result of FUNC applied with operands A and B
 // This module is purely combinational
-module alu (
-    input [`XLEN-1:0] opa,
-    input [`XLEN-1:0] opb,
-    ALU_FUNC          func,
 
-    output logic [`XLEN-1:0] result
-);
-
-    logic signed [`XLEN-1:0]   signed_opa, signed_opb;
-    logic signed [2*`XLEN-1:0] signed_mul, mixed_mul;
-    logic        [2*`XLEN-1:0] unsigned_mul;
-
-    assign signed_opa   = opa;
-    assign signed_opb   = opb;
-
-    // We let verilog do the full 32-bit multiplication for us.
-    // This gives a large clock period.
-    // You will replace this with your pipelined multiplier in project 4.
-    assign signed_mul   = signed_opa * signed_opb;
-    assign unsigned_mul = opa * opb;
-    assign mixed_mul    = signed_opa * opb;
-
-    always_comb begin
-        case (func)
-            ALU_ADD:    result = opa + opb;
-            ALU_SUB:    result = opa - opb;
-            ALU_AND:    result = opa & opb;
-            ALU_SLT:    result = signed_opa < signed_opb;
-            ALU_SLTU:   result = opa < opb;
-            ALU_OR:     result = opa | opb;
-            ALU_XOR:    result = opa ^ opb;
-            ALU_SRL:    result = opa >> opb[4:0];
-            ALU_SLL:    result = opa << opb[4:0];
-            ALU_SRA:    result = signed_opa >>> opb[4:0]; // arithmetic from logical shift
-            ALU_MUL:    result = signed_mul[`XLEN-1:0];
-            ALU_MULH:   result = signed_mul[2*`XLEN-1:`XLEN];
-            ALU_MULHSU: result = mixed_mul[2*`XLEN-1:`XLEN];
-            ALU_MULHU:  result = unsigned_mul[2*`XLEN-1:`XLEN];
-
-            default:    result = `XLEN'hfacebeec;  // here to prevent latches
-        endcase
-    end
-
-endmodule // alu
 
 
 // Conditional branch module: compute whether to take conditional branches
 // This module is purely combinational
-module conditional_branch (
-    input [2:0]       func, // Specifies which condition to check
-    input [`XLEN-1:0] rs1,  // Value to check against condition
-    input [`XLEN-1:0] rs2,
-
-    output logic take // True/False condition result
-);
-
-    logic signed [`XLEN-1:0] signed_rs1, signed_rs2;
-    assign signed_rs1 = rs1;
-    assign signed_rs2 = rs2;
-    always_comb begin
-        case (func)
-            3'b000:  take = signed_rs1 == signed_rs2; // BEQ
-            3'b001:  take = signed_rs1 != signed_rs2; // BNE
-            3'b100:  take = signed_rs1 < signed_rs2;  // BLT
-            3'b101:  take = signed_rs1 >= signed_rs2; // BGE
-            3'b110:  take = rs1 < rs2;                // BLTU
-            3'b111:  take = rs1 >= rs2;               // BGEU
-            default: take = `FALSE;
-        endcase
-    end
-
-endmodule // conditional_branch
 
 
-module stage_ex (
+
+module stage_ls (
     input clock,
     input reset,
+    input [`XLEN-1:0]           Dmem2proc_data,
     input ID_EX_PACKET 		id_ex_reg,
-	input logic 			valid,
-	input logic[2:0] 		ROB_num,
-
-	output logic 			done,
+    input logic 			valid,
+    input logic[2:0] 		ROB_num,
+    output logic [1:0]          proc2Dmem_command,
+    output MEM_SIZE             proc2Dmem_size,
+    output logic [`XLEN-1:0]    proc2Dmem_addr,
+    output logic [`XLEN-1:0]    proc2Dmem_data,
+    output logic 			done,
 	//output logic			busy,
-	output logic[2:0]		cdb_tag,
+    output logic[2:0]		cdb_tag,
     output EX_MEM_PACKET 	ex_packet
 );
 
-    logic [`XLEN-1:0] opa_mux_out, opb_mux_out;
+    logic [`XLEN-1:0] opa_mux_out, opb_mux_out, read_data, alu_res;
     logic take_conditional;
+    assign ex_packet.alu_result = (id_ex_reg.rd_mem) ? read_data : alu_res; 
 always_ff @(posedge clock) begin
     if(reset) begin
 	ex_packet.NPC          <= 0;
@@ -140,6 +79,8 @@ always_ff @(posedge clock) begin
 		ex_packet.valid        <= id_ex_reg.valid;
 		done                   <= 1'b1;
 		cdb_tag                <= ROB_num;
+	        proc2Dmem_data         <= id_ex_reg.rs2_value;
+		proc2Dmem_addr         <= alu_res;
 
 	    // Break out the signed/unsigned bit and memory read/write size
 		ex_packet.rd_unsigned  <= id_ex_reg.inst.r.funct3[2]; // 1 if unsigned, 0 if signed
@@ -172,20 +113,39 @@ always_ff @(posedge clock) begin
 
 end
 
+always_comb begin
+        read_data = Dmem2proc_data;
+        if (id_ex_reg.inst.r.funct3[2]) begin
+            // unsigned: zero-extend the data
+            if (id_ex_reg.inst.r.funct3[1:0] == BYTE) begin
+                read_data[`XLEN-1:8] = 0;
+            end else if (id_ex_reg.inst.r.funct3[1:0] == HALF) begin
+                read_data[`XLEN-1:16] = 0;
+            end
+        end else begin
+            // signed: sign-extend the data
+            if (id_ex_reg.inst.r.funct3[1:0] == BYTE) begin
+                read_data[`XLEN-1:8] = {(`XLEN-8){Dmem2proc_data[7]}};
+            end else if (id_ex_reg.inst.r.funct3[1:0] == HALF) begin
+                read_data[`XLEN-1:16] = {(`XLEN-16){Dmem2proc_data[15]}};
+            end
+        end
+    end
+
 
     // Instantiate the ALU
-    alu alu_0 (
+    alu alu_1 (
         // Inputs
         .opa(opa_mux_out),
         .opb(opb_mux_out),
         .func(id_ex_reg.alu_func),
 
         // Output
-        .result(ex_packet.alu_result)
+        .result(alu_res)
     );
 
     // Instantiate the conditional branch module
-    conditional_branch conditional_branch_0 (
+    conditional_branch conditional_branch_1 (
         // Inputs
         .func(id_ex_reg.inst.b.funct3), // instruction bits for which condition to check
         .rs1(id_ex_reg.rs1_value),
