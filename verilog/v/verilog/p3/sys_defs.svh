@@ -13,47 +13,6 @@
 // all files should `include "sys_defs.svh" to at least define the timescale
 `timescale 1ns/100ps
 
-///////////////////////////////////
-// ---- Starting Parameters ---- //
-///////////////////////////////////
-
-// some starting parameters that you should set
-// this is *your* processor, you decide these values (try analyzing which is best!)
-`define RS_SIZE 6
-`define FU_OPCODE_BIT_WIDTH 3
-`define ALU_FU_SELECT_BIT_WIDTH 3
-`define TOTAL_NUM_FU 5 // Total # of functional units in EX
-`define REG_ADDR_BIT_WIDTH 5
-`define ROB_SIZE 7
-`define ROB_BIT_WIDTH $clog2(`ROB_SIZE + 1)
-
-// MAP Table
-`define TAG_SIZE 4
-
-// CDB
-`define CDB_TAG_BIT_WIDTH 3
-
-// superscalar width
-`define N 1
-
-// sizes
-`define ROB_SZ xx
-`define RS_SZ xx
-`define PHYS_REG_SZ (32 + `ROB_SZ)
-
-// worry about these later
-`define BRANCH_PRED_SZ xx
-`define LSQ_SZ xx
-
-// functional units (you should decide if you want more or fewer types of FUs)
-`define NUM_FU_ALU xx
-`define NUM_FU_MULT xx
-`define NUM_FU_LOAD xx
-`define NUM_FU_STORE xx
-
-// number of mult stages (2, 4, or 8)
-`define MULT_STAGES 4
-
 ///////////////////////////////
 // ---- Basic Constants ---- //
 ///////////////////////////////
@@ -79,28 +38,15 @@
 // ---- Memory Definitions ---- //
 //////////////////////////////////
 
-// Cache mode removes the byte-level interface from memory, so it always returns
-// a double word. The original processor won't work with this defined. Your new
-// processor will have to account for this effect on mem.
-// Notably, you can no longer write data without first reading.
-`define CACHE_MODE
-
-// you are not allowed to change this definition for your final processor
+// this will change for project 4
 // the project 3 processor has a massive boost in performance just from having no mem latency
 // see if you can beat it's CPI in project 4 even with a 100ns latency!
-// `define MEM_LATENCY_IN_CYCLES  0
-`define MEM_LATENCY_IN_CYCLES (100.0/`CLOCK_PERIOD+0.49999)
-// the 0.49999 is to force ceiling(100/period). The default behavior for
-// float to integer conversion is rounding to nearest
+`define MEM_LATENCY_IN_CYCLES  0
 
-// How many memory requests can be waiting at once
 `define NUM_MEM_TAGS 15
 
 `define MEM_SIZE_IN_BYTES (64*1024)
 `define MEM_64BIT_LINES   (`MEM_SIZE_IN_BYTES/8)
-
-
-
 
 typedef union packed {
     logic [7:0][7:0]  byte_level;
@@ -121,10 +67,6 @@ typedef enum logic [1:0] {
     BUS_LOAD   = 2'h1,
     BUS_STORE  = 2'h2
 } BUS_COMMAND;
-
-
-
-
 
 ///////////////////////////////
 // ---- Exception Codes ---- //
@@ -159,6 +101,51 @@ typedef enum logic [3:0] {
     HALTED_ON_WFI       = 4'he, // 'Wait For Interrupt'. In 470, signifies the end of computation
     STORE_PAGE_FAULT    = 4'hf
 } EXCEPTION_CODE;
+
+////////////////////////////////////////
+// ---- Datapath Control Signals ---- //
+////////////////////////////////////////
+
+// ALU opA input mux selects
+typedef enum logic [1:0] {
+    OPA_IS_RS1  = 2'h0,
+    OPA_IS_NPC  = 2'h1,
+    OPA_IS_PC   = 2'h2,
+    OPA_IS_ZERO = 2'h3
+} ALU_OPA_SELECT;
+
+// ALU opB input mux selects
+typedef enum logic [3:0] {
+    OPB_IS_RS2    = 4'h0,
+    OPB_IS_I_IMM  = 4'h1,
+    OPB_IS_S_IMM  = 4'h2,
+    OPB_IS_B_IMM  = 4'h3,
+    OPB_IS_U_IMM  = 4'h4,
+    OPB_IS_J_IMM  = 4'h5
+} ALU_OPB_SELECT;
+
+// ALU function code input
+// probably want to leave these alone
+typedef enum logic [4:0] {
+    ALU_ADD     = 5'h00,
+    ALU_SUB     = 5'h01,
+    ALU_SLT     = 5'h02,
+    ALU_SLTU    = 5'h03,
+    ALU_AND     = 5'h04,
+    ALU_OR      = 5'h05,
+    ALU_XOR     = 5'h06,
+    ALU_SLL     = 5'h07,
+    ALU_SRL     = 5'h08,
+    ALU_SRA     = 5'h09,
+    ALU_MUL     = 5'h0a,
+    ALU_MULH    = 5'h0b,
+    ALU_MULHSU  = 5'h0c,
+    ALU_MULHU   = 5'h0d,
+    ALU_DIV     = 5'h0e,
+    ALU_DIVU    = 5'h0f,
+    ALU_REM     = 5'h10,
+    ALU_REMU    = 5'h11
+} ALU_FUNC;
 
 ///////////////////////////////////
 // ---- Instruction Typedef ---- //
@@ -239,61 +226,6 @@ typedef union packed {
 
 } INST; // instruction typedef, this should cover all types of instructions
 
-typedef enum logic [`ALU_FU_SELECT_BIT_WIDTH-1:0] {
-    ALU_FU = 3'b001,
-    MULT1_FU  = 3'b010,
-    // M2 = 3'b010,
-    LS_FU  = 3'b011,
-    BR_FU  = 3'b100,
-    UNKNOWN_FU = 3'b000
-} Opcode;
-
-
-////////////////////////////////////////
-// ---- Datapath Control Signals ---- //
-////////////////////////////////////////
-
-// ALU opA input mux selects
-typedef enum logic [1:0] {
-    OPA_IS_RS1  = 2'h0,
-    OPA_IS_NPC  = 2'h1,
-    OPA_IS_PC   = 2'h2,
-    OPA_IS_ZERO = 2'h3
-} ALU_OPA_SELECT;
-
-// ALU opB input mux selects
-typedef enum logic [3:0] {
-    OPB_IS_RS2    = 4'h0,
-    OPB_IS_I_IMM  = 4'h1,
-    OPB_IS_S_IMM  = 4'h2,
-    OPB_IS_B_IMM  = 4'h3,
-    OPB_IS_U_IMM  = 4'h4,
-    OPB_IS_J_IMM  = 4'h5
-} ALU_OPB_SELECT;
-
-
-// ALU function code input
-// probably want to leave these alone
-typedef enum logic [4:0] {
-    ALU_ADD     = 5'h00,
-    ALU_SUB     = 5'h01,
-    ALU_SLT     = 5'h02,
-    ALU_SLTU    = 5'h03,
-    ALU_AND     = 5'h04,
-    ALU_OR      = 5'h05,
-    ALU_XOR     = 5'h06,
-    ALU_SLL     = 5'h07,
-    ALU_SRL     = 5'h08,
-    ALU_SRA     = 5'h09,
-    ALU_MUL     = 5'h0a, // Mult FU
-    ALU_MULH    = 5'h0b, // Mult FU
-    ALU_MULHSU  = 5'h0c, // Mult FU
-    ALU_MULHU   = 5'h0d, // Mult FU
-    ALU_DIV     = 5'h0e, // unused
-    ALU_DIVU    = 5'h0f, // unused
-    ALU_REM     = 5'h10, // unused
-    ALU_REMU    = 5'h11  // unused
-} ALU_FUNC;
 
 ////////////////////////////////
 // ---- Datapath Packets ---- //
@@ -340,17 +272,10 @@ typedef struct packed {
     logic       uncond_branch; // Is inst an unconditional branch?
     logic       halt;          // Is this a halt?
     logic       illegal;       // Is this instruction illegal?
-    logic       csr_op;        // Is this a CSR operation? (we use this to get return code)
+    logic       csr_op;        // Is this a CSR operation? (we only used this as a cheap way to get return code)
 
     logic       valid;
 } ID_EX_PACKET;
-
-
-typedef struct {
-    logic                           done;
-    logic [`CDB_TAG_BIT_WIDTH-1:0]  tag;
-} ex_packet_out;
-
 
 /**
  * EX_MEM Packet:
@@ -393,119 +318,5 @@ typedef struct packed {
 /**
  * No WB output packet as it would be more cumbersome than useful
  */
-typedef struct {
-    logic[`RS_SIZE-1:0]       busy_signal;
-    logic [2:0]      out_opcode[`RS_SIZE-1:0];
-    logic[2:0]      T[`RS_SIZE-1:0];
-    logic[2:0]      T1[`RS_SIZE-1:0];
-    logic [2:0]     T2[`RS_SIZE-1:0];
-    logic[31:0]      V1[`RS_SIZE-1:0];
-    logic [31:0]     V2[`RS_SIZE-1:0];
-    logic[3:0]      map_table[`XLEN-1:0];
-    ID_EX_PACKET       id_packet[`RS_SIZE-1:0];  
-    INST             inst[`RS_SIZE-1:0];
-
-} RS;
-
-
-typedef struct {
-    int opcode;
-    int idx;
-} OperationType;
-
-// IMPORTANT!!! THE ORDER OF DECLARATION MATTERS FOR THIS AND @operationDetails
-typedef enum {
-    ALU,
-    MULT1,
-    LS,
-    BR,
-    UNKNOWN
-} OperationCode;
-
-// IMPORTANT!!! THE ORDER OF DECLARATION MATTERS FOR THIS AND @operationDetails
-const OperationType funcUnits[5] = '{
-    '{1, 1}, // ALU
-    '{2, 4}, // MULT1
-    '{3, 2}, // LS
-    '{4, 3}, // BR
-    '{5, 5} // UNKNOWN
-};
-
-
-typedef struct {
-    logic            buffer_full;
-    logic            buffer_completed;
-    logic[3:0]       head;
-    logic[3:0]       tail;
-    logic[2:0]       opcodes[`ROB_SIZE-1:0];
-    logic[4:0]       input_reg_1s[`ROB_SIZE-1:0];
-    logic[4:0]       input_reg_2s[`ROB_SIZE-1:0];
-    logic[4:0]       dest_regs[7:0];
-    logic[31:0]      Rs[`ROB_SIZE-1:0];
-    logic[31:0]      Vs[`ROB_SIZE-1:0];
-    ID_EX_PACKET     id_packet[`ROB_SIZE-1:0];
-} ROB;
-
-
-typedef struct packed {
-	logic [`XLEN-1:0]		            NPC;
-	logic [`XLEN-1:0]		            PC;
-	logic					               fu_done;
-	logic [`REG_ADDR_BIT_WIDTH-1:0]  dest_reg_idx;
-	logic [`XLEN-1:0]		            value;
-   logic [`CDB_TAG_BITS-1:0]        value_tag;
-   FU_OPCODE                        opcode;
-   logic [`REG_ADDR_BIT_WIDTH-1:0]  rs1_in;
-   logic [`REG_ADDR_BIT_WIDTH-1:0]  rs2_in;
-   logic					               value_valid;
-   logic                            is_mult;
-	logic				                  is_load_store;
-	logic 					            is_branch;
-	logic [`XLEN-1:0]	               branch_addr;
-	logic					               take_branch;
-   logic                            squash;
-   logic [`ROB_BIT_WIDTH-1:0]       squash_idx;
-	logic				                  halt;
-} ROB_ENTRY;
-
-
-typedef enum logic [2:0] {
-    CDB_ALU = 3'b001,
-    CDB_MULT0 = 3'b010,
-    CDB_MULT1 = 3'b011,
-    CDB_LOAD_STORE = 3'b100,
-    CDB_BRANCH = 3'b101
-} CDBControl;
-
-typedef struct packed {
-    logic valid;                // 1 bit
-    logic clear_branch;             // 1 bit
-    logic clear_ls;
-    logic clear_mult1;              // 1 bit
-    logic clear_mult0;              // 1 bit
-    logic clear_alu;                // 1 bit
-    logic [`XLEN-1:0] value;        // XLEN bits
-    logic [`CDB_TAG_BIT_WIDTH-1:0] tag;
-} cdb_packet_out;
-
-typedef struct packed {
-   logic done;
-   logic [`CDB_TAG_BIT_WIDTH-1:0] tag;
-   union packed {
-      logic [`XLEN-1:0] alu_result;  // Field from EX_MEM_PACKET
-      logic [`XLEN-1:0] mem_result; // Field from MEM_WB_PACKET
-   } value;
-   logic clear;
-} cdb_packet_in;
-
-typedef struct packed {
-    cdb_packet_in alu;
-    cdb_packet_in mult0;
-    cdb_packet_in mult1;
-    cdb_packet_in load_store;
-    cdb_packet_in branch;
-} ex_cdb_packet_in;
-
-
 
 `endif // __SYS_DEFS_SVH__

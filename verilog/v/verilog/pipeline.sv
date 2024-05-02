@@ -1,6 +1,3 @@
-`ifndef __PIPELINE_SV__
-`define __PIPELINE_SV__
-
 /////////////////////////////////////////////////////////////////////////
 //                                                                     //
 //   Modulename :  pipeline.sv                                         //
@@ -818,5 +815,3 @@ module pipeline (
     assign pipeline_commit_NPC     = mem_wb_reg.NPC;
 */
 endmodule // pipeline
-
-`endif __PIPELINE_SV__
