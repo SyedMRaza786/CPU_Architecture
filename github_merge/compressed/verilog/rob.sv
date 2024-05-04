@@ -43,84 +43,91 @@ module rob (
     always_ff @(posedge clock) begin
         if (reset) begin
             rob_out.head <= `ROB_FIRST_IDX, rob_out.tail <= `ROB_FIRST_IDX;
-            for(int i = 0; i < `ROB_SIZE; i++) begin
-                rob_out.opcodes[i] <= '0; // 0-fill
-                rob_out.input_reg_1s[i] <= '0;
-                rob_out.input_reg_2s[i] <= '0;
-                rob_out.Rs[i] <= '0;
-                rob_out.Vs[i] <= '0;
-                rob_out.is_full <= 1'b0;
-                rob_out.buffer_completed <= 1'b0;
-                rob_out.id_packet[i] <= '0;
-                temp_tail <= 1'b0;
-                rob_out.completed[i] <= 1'b0;
-            end
+            reset_rob_entries(0, `ROB_SIZE, rob_in, rob_out);
+            // for(int i = 0; i < `ROB_SIZE; i++) begin
+            //     rob_out.opcodes[i] <= '0; // 0-fill
+            //     rob_out.input_reg_1s[i] <= '0;
+            //     rob_out.input_reg_2s[i] <= '0;
+            //     rob_out.Rs[i] <= '0;
+            //     rob_out.Vs[i] <= '0;
+            //     rob_out.is_full <= 1'b0;
+            //     rob_out.buffer_completed <= 1'b0;
+            //     rob_out.id_packet[i] <= '0;
+            //     rob_out.completed[i] <= 1'b0;
+            // end
 
 	    end else begin
 	        if (rob_in.completed[rob_in.head]) begin
 		        retire_out <= 1'b1;
-		    if (rob_in.Rs[rob_in.head] != 0) begin
-                writeback_valid <= 1'b0;
-		    end else writeback_valid <= 1'b0;
-        end else retire_out <= 1'b0;
-            rob_out <= rob_in;
-
-            if (valid == 1) begin
-                if (rob_in.head == `ROB_FIRST_IDX && rob_in.tail == `ROB_FIRST_IDX) begin
-                    rob_out.head            <= `ROB_FIRST_IDX;
-                    rob_out.tail            <= `ROB_FIRST_IDX;
-                    rob_out.opcodes[0]      <= opcode;
-                    rob_out.input_reg_1s[0] <= input_reg_1;
-                    rob_out.input_reg_2s[0] <= input_reg_2;
-                    rob_out.Rs[0]           <= dest_reg;
-                    rob_out.id_packet[0]  <= id_packet;
-                end else begin
-                    if(rob_in.tail == 7) begin
-                        rob_out.opcodes[0] <= opcode;
+                if (rob_in.Rs[rob_in.head] != 0) begin
+                    writeback_valid <= 1'b0;
+                end else writeback_valid <= 1'b0;
+            end else retire_out <= 1'b0;
+                rob_out <= rob_in;
+                if (valid == 1) begin
+                    if ((rob_in.head == `ROB_FIRST_IDX && rob_in.tail == `ROB_FIRST_IDX) || rob_in.tail == `ROB_LAST_IDX) begin // both 1
+                        if (rob_in.tail == `ROB_LAST_IDX) begin
+                            rob_out.tail <= '0;
+                            rob_out.completed[0] <= 1'b0; // also for below?
+                        end else begin
+                            rob_out.head            <= `ROB_FIRST_IDX; // 1
+                            rob_out.tail            <= `ROB_FIRST_IDX; // 1
+                        end
+                        // rob_out.head            <= `ROB_FIRST_IDX; // 1
+                        // rob_out.tail            <= `ROB_FIRST_IDX; // 
+                        rob_out.opcodes[0]      <= opcode;
                         rob_out.input_reg_1s[0] <= input_reg_1;
                         rob_out.input_reg_2s[0] <= input_reg_2;
-                        rob_out.Rs[0] <= dest_reg;
-                        rob_out.completed[0] <= 1'b0;
-                        rob_out.id_packet[0]    <= id_packet;
-                        rob_out.tail <= `ROB_BIT_LEN'b0;
+                        rob_out.Rs[0]           <= dest_reg;
+                        rob_out.id_packet[0]  <= id_packet;
                     end else begin
-				        rob_out.completed[rob_in.tail] <= 1'b0;
-			            rob_out.opcodes[rob_in.tail] <= opcode;
-                        rob_out.input_reg_1s[rob_in.tail] <= input_reg_1;
-                        rob_out.input_reg_2s[rob_in.tail] <= input_reg_2;
-                        rob_out.Rs[rob_in.tail] <= dest_reg;
-                        rob_out.id_packet[rob_in.tail]    <= id_packet;
-                        if (rob_in.tail == (`ROB_LAST_IDX - 1)) begin: TAIL_IS_6
-				            if (rob_in.head == `ROB_FIRST_IDX) begin
-                                rob_out.is_full <= 1'b1;
-                                rob_out.tail <= `ROB_LAST_IDX;
-		                    end else begin
-				               rob_out.tail <= `ROB_LAST_IDX;
-                            end
-                        end else begin
-                            if(rob_in.head != (rob_in.tail + 2)) begin
-                                rob_out.tail <= rob_in.tail + 1;
+                        // if (rob_in.tail == `ROB_LAST_IDX) begin: TAIL_IS_7
+                            // rob_out.opcodes[0] <= opcode;
+                            // rob_out.input_reg_1s[0] <= input_reg_1;
+                            // rob_out.input_reg_2s[0] <= input_reg_2;
+                            // rob_out.Rs[0] <= dest_reg;
+                            // // rob_out.completed[0] <= 1'b0;
+                            // rob_out.id_packet[0]    <= id_packet;
+                            // rob_out.tail <= '0; // 1
+                        // end 
+                        //else begin
+                            rob_out.completed[rob_in.tail] <= 1'b0;
+                            rob_out.opcodes[rob_in.tail] <= opcode;
+                            rob_out.input_reg_1s[rob_in.tail] <= input_reg_1;
+                            rob_out.input_reg_2s[rob_in.tail] <= input_reg_2;
+                            rob_out.Rs[rob_in.tail] <= dest_reg;
+                            rob_out.id_packet[rob_in.tail]    <= id_packet;
+                            if (rob_in.tail == (`ROB_LAST_IDX - 1)) begin: TAIL_IS_6
+                                if (rob_in.head == `ROB_FIRST_IDX) begin
+                                    rob_out.is_full <= 1'b1;
+                                    rob_out.tail <= `ROB_LAST_IDX;
+                                end else begin
+                                    rob_out.tail <= `ROB_LAST_IDX;
+                                end
                             end else begin
-                                rob_out.tail <= rob_in.tail + 1;
-                                rob_out.is_full <= 1;
+                                if(rob_in.head != (rob_in.tail + 2)) begin
+                                    rob_out.tail <= rob_in.tail + 1;
+                                end else begin
+                                    rob_out.tail <= rob_in.tail + 1;
+                                    rob_out.is_full <= 1;
+                                end
                             end
-                        end
+                        //end
                     end
                 end
-            end
 
                 if (value_valid == 1) begin
                     $display("   ```value_tag: %d     value: %d", value_tag, value);
                     rob_out.Vs [value_tag] <= value;
                     rob_out.completed[value_tag] <= 1;
                 end
-                if(retire_in == 1) begin
+                if (retire_in == 1) begin
 	                $display("Retire INNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN");
                     rob_out.opcodes[rob_in.head] <= '0;
                     rob_out.input_reg_1s[rob_in.head] <= '0;
-                    rob_out.input_reg_2s[rob_in.head] <= `REG_ADDR_WIDTH'b0;
-                    rob_out.Rs[rob_in.head] <= `REG_ADDR_WIDTH'b0;
-                    rob_out.Vs[rob_in.head] <= `XLEN'b0;
+                    rob_out.input_reg_2s[rob_in.head] <= '0;
+                    rob_out.Rs[rob_in.head] <= '0;
+                    rob_out.Vs[rob_in.head] <= '0;
                     rob_out.is_full <= 0;
                     rob_out.id_packet[rob_in.head]    <= 0;
                 if (rob_in.head == `ROB_LAST_IDX) begin
@@ -130,42 +137,46 @@ module rob (
                 end
             end
             if (squash) begin
+                rob_out.tail <= squash_index;
                 if (rob_in.tail > squash_index) begin
-                    for (int i = (squash_index + 1); i < rob_in.tail; i++) begin
-                        rob_out.tail <= squash_index;
-                        rob_out.opcodes[i] <= '0;
-                        rob_out.input_reg_1s[i] <= '0;
-                        rob_out.input_reg_2s[i] <= '0;
-                        rob_out.Rs[i] <= '0;
-                        rob_out.Vs[i] <= '0;
-                        rob_out.is_full <= 0;
-                        rob_out.buffer_completed <= 0;
-                        rob_out.id_packet[i] <= '0;
-                    end
+                    clear_rob_entries((squash_index + 1), rob_in.tail, rob_in, rob_out);
+                    // for (int i = (squash_index + 1); i < rob_in.tail; i++) begin
+                    //     rob_out.tail <= squash_index;
+                    //     rob_out.opcodes[i] <= '0;
+                    //     rob_out.input_reg_1s[i] <= '0;
+                    //     rob_out.input_reg_2s[i] <= '0;
+                    //     rob_out.Rs[i] <= '0;
+                    //     rob_out.Vs[i] <= '0;
+                    //     rob_out.is_full <= 0;
+                    //     rob_out.buffer_completed <= 0;
+                    //     rob_out.id_packet[i] <= '0;
+                    // end
 		        end else begin
-                    for (int i = (squash_index + 1); i < `ROB_SIZE; i++) begin
-                        rob_out.tail <= squash_index;
-                        rob_out.opcodes[i] <= '0;
-                        rob_out.input_reg_1s[i] <= '0;
-                        rob_out.input_reg_2s[i] <= '0;
-                        rob_out.Rs[i] <= '0;
-                        rob_out.Vs[i] <= '0;
-                        rob_out.is_full <= 0;
-                        rob_out.buffer_completed <= 0;
-                        rob_out.id_packet[i] <= '0;
-                    end
-                    for (int j = 0; j < rob_in.tail; j++) begin
-                        rob_out.tail <= squash_index;
-                        rob_out.opcodes[i] <= '0;
-                        rob_out.input_reg_1s[i] <= '0;
-                        rob_out.input_reg_2s[i] <= '0;
-                        rob_out.Rs[i] <= '0;
-                        rob_out.Vs[i] <= '0;
-                        rob_out.is_full <= 0;
-                        rob_out.buffer_completed <= 0;
-                        rob_out.id_packet[i] <= '0;
+                    clear_rob_entries((squash_index + 1), `ROB_SIZE, rob_in, rob_out);
+                    clear_rob_entries(0, rob_in.tail, rob_in, rob_out);
+                    // for (int i = (squash_index + 1); i < `ROB_SIZE; i++) begin
+                    //     rob_out.tail <= squash_index;
+                    //     rob_out.opcodes[i] <= '0;
+                    //     rob_out.input_reg_1s[i] <= '0;
+                    //     rob_out.input_reg_2s[i] <= '0;
+                    //     rob_out.Rs[i] <= '0;
+                    //     rob_out.Vs[i] <= '0;
+                    //     rob_out.is_full <= 0;
+                    //     rob_out.buffer_completed <= 0;
+                    //     rob_out.id_packet[i] <= '0;
+                    // end
+                    // for (int j = 0; j < rob_in.tail; j++) begin
+                    //     rob_out.tail <= squash_index;
+                    //     rob_out.opcodes[i] <= '0;
+                    //     rob_out.input_reg_1s[i] <= '0;
+                    //     rob_out.input_reg_2s[i] <= '0;
+                    //     rob_out.Rs[i] <= '0;
+                    //     rob_out.Vs[i] <= '0;
+                    //     rob_out.is_full <= 0;
+                    //     rob_out.buffer_completed <= 0;
+                    //     rob_out.id_packet[i] <= '0;
 
-                    end
+                    // end
                 end
             end
         end
@@ -187,18 +198,37 @@ task clear_rob_entries(
     inout ROB rob_out
 );
     integer i;
-    for (i = start_idx; i < rob_in.tail; i++) begin
-        rob_out.opcodes[i] = `FU_OPCODE_WIDTH'b0;
-        rob_out.input_reg_1s[i] = `REG_ADDR_WIDTH'b0;
-        rob_out.input_reg_2s[i] = `REG_ADDR_WIDTH'b0;
-        rob_out.Rs[i] = `REG_ADDR_WIDTH'b0;
-        rob_out.Vs[i] = `XLEN'b0;
+    for (i = start_idx; i < end_idx; i++) begin
+        rob_out.opcodes[i] = '0;
+        rob_out.input_reg_1s[i] = '0;
+        rob_out.input_reg_2s[i] = '0;
+        rob_out.Rs[i] = '0;
+        rob_out.Vs[i] = '0;
         rob_out.is_full = 1'b0;
         rob_out.buffer_completed = 1'b0;
         rob_out.id_packet[i] = '0;
     end
-    rob_out.tail = start_idx;  // Set the tail after clearing
+    // rob_out.tail = start_idx;  // Set the tail after clearing
 endtask
 
-
+task reset_rob_entries(
+    input integer start_idx,
+    input integer end_idx,
+    inout ROB rob_in,
+    inout ROB rob_out
+);
+    integer i;
+    for (i = start_idx; i < end_idx; i++) begin
+        rob_out.opcodes[i] = '0;
+        rob_out.input_reg_1s[i] = '0;
+        rob_out.input_reg_2s[i] = '0;
+        rob_out.Rs[i] = '0;
+        rob_out.Vs[i] = '0;
+        rob_out.is_full = 1'b0;
+        rob_out.buffer_completed = 1'b0;
+        rob_out.id_packet[i] = '0;
+        rob_out.completed[i] <= '0;
+    end
+    // rob_out.tail = start_idx;  // Set the tail after clearing
+endtask
 endmodule
