@@ -19,20 +19,35 @@
 // ---- Starting Parameters ---- //
 ///////////////////////////////////
 
-// some starting parameters that you should set
-// this is *your* processor, you decide these values (try analyzing which is best!)
+`define N 1
 
-`define RS_SIZE 6
+//////////////////////////////////////////////////////////
+// -------------------- I$ D$ Mem --------------------- //
+//////////////////////////////////////////////////////////
 
 `define FU_OPCODE_BIT_WIDTH 3
 `define ALU_FU_SELECT_BIT_WIDTH 3
-`define TOTAL_NUM_FU 5
+
 `define REG_ADDR_BIT_WIDTH 5
+
+//////////////////////////////////////////////////////////
+// --------------------- EX Stage --------------------- //
+//////////////////////////////////////////////////////////
+
+`define MULT_STAGES 4
+`define DW_SIZE ((`XLEN * 2))
+`define BITS_PER_STAGE (`DW_SIZE / `MULT_STAGES)
+
+//////////////////////////////////////////////////////////
+// OOO Pipeline Components: Functional Units + RS + ROB //
+//////////////////////////////////////////////////////////
+
+`define RS_SIZE 6
+`define TOTAL_NUM_FU 5
 
 `ifdef ROB_SZ_8
 `define ROB_SIZE 8
 `endif
-
 `ifdef ROB_SZ_16
 `define ROB_SIZE 16
 `endif
@@ -45,9 +60,6 @@
 // @TODO: CDB: tag_bit_width == 4
 `define CDB_TAG_BIT_WIDTH 4
 `define CDB_OUT_PACKET_LEN (`XLEN + `CDB_TAG_BIT_WIDTH + `TOTAL_NUM_FU + `FU_OPCODE_BIT_WIDTH + 2)
-
-// superscalar width
-`define N 1
 
 // sizes
 `define ROB_SZ xx
@@ -63,9 +75,6 @@
 `define NUM_FU_MULT xx
 `define NUM_FU_LOAD xx
 `define NUM_FU_STORE xx
-
-// number of mult stages (2, 4, or 8)
-`define MULT_STAGES 4
 
 ///////////////////////////////
 // ---- Basic Constants ---- //
@@ -111,8 +120,6 @@
 
 `define MEM_SIZE_IN_BYTES (64*1024)
 `define MEM_64BIT_LINES   (`MEM_SIZE_IN_BYTES/8)
-
-
 
 
 typedef union packed {
@@ -252,6 +259,11 @@ typedef union packed {
 
 } INST; // instruction typedef, this should cover all types of instructions
 
+
+/////////////////////////////////////////////////
+// ---------- FUNCTIONAL UNITS / EX ---------- //
+/////////////////////////////////////////////////
+
 typedef enum logic [`ALU_FU_SELECT_BIT_WIDTH-1:0] {
     ALU_FU = 3'b001,
     MULT0_FU  = 3'b010,
@@ -260,7 +272,6 @@ typedef enum logic [`ALU_FU_SELECT_BIT_WIDTH-1:0] {
     UNKNOWN_FU = 3'b000,
     MULT1_FU = 3'b101
 } Opcode;
-
 
 typedef struct {
     int opcode;
@@ -311,7 +322,6 @@ typedef enum logic [3:0] {
     OPB_IS_U_IMM  = 4'h4,
     OPB_IS_J_IMM  = 4'h5
 } ALU_OPB_SELECT;
-
 
 // ALU function code input
 // probably want to leave these alone
@@ -524,15 +534,14 @@ typedef struct packed {
 } EX_RS_PACKET;
 
 typedef struct packed {
-   logic exec_done;
-   logic valid;
-   
+   logic 			exec_done;
+   logic 			valid;
    logic [`CDB_TAG_BIT_WIDTH-1:0] tag;
-   logic [`XLEN-1:0] result;  // Field from EX_MEM_PACKET
+   logic [`XLEN-1:0] 		result;  // Field from EX_MEM_PACKET
    //    logic [`XLEN-1:0] mem_result; // Field from MEM_WB_PACKET
    // } value;
-   Opcode     fu_opcode;
-   logic clear;
+   Opcode     			fu_opcode;
+   logic 			clear;
 } RS_CDB_PACKET;
 
 
