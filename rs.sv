@@ -90,6 +90,29 @@ module rs (
             end // for loop
             for (int i = 0; i < 32; i++)  out.map_table[i] <= 0;
         end else begin
+      for (int i = 0; i <= `RS_SIZE; i++) begin
+         		if(exec_run[i] == 1) begin
+			    out.busy_signal[i] <= 0;
+			    out.T[i] <= 0;
+			    out.T1[i] <= 0;
+			    out.T2[i] <= 0;
+			    out.V1[i] <= 0;
+			    out.V2[i] <= 0;
+			end
+			 exec_run[i] <= ((rs_table.map_table[input_reg_1] == 0 ||
+				   rs_table.map_table[input_reg_1][0] == 1) && 
+				   (rs_table.map_table[input_reg_2] == 0 || 
+				   rs_table.map_table[input_reg_2][0] == 1) && 
+				   exec_busy[i] == 0 && rs_table.busy_signal[i] == 1);
+			 /*if ((rs_table.map_table[input_reg_1] == 0 ||
+				   rs_table.map_table[input_reg_1][0] == 1) && 
+				   (rs_table.map_table[input_reg_2] == 0 || 
+				   rs_table.map_table[input_reg_2][0] == 1) && 
+				   exec_busy[i] == 0 && rs_table.busy_signal[i] == 1 && i != idx); begin: clear_RS
+			    $display("RS_TABLE_busy_signal [%d] = %b and i = %d", i, rs_table.busy_signal[i], i);
+			    out.busy_signal[i] <= 0; // next cycle
+         	    	 end*/
+		    end // for loop
       if (rs_valid) begin
          out <= rs_table;
          out.map_table[dest_reg] <= {ROB_number, 1'b0};
@@ -104,21 +127,8 @@ module rs (
          endcase
       end 
 
-      for (int i = 0; i <= `RS_SIZE; i++) begin
-         // if ((rs_table.map_table[rs_table.id_packet[i].inst.r.rs1] == 0 ||
-         //       rs_table.map_table[rs_table.id_packet[i].inst.r.rs1][0] == 1) &&
-         //       (rs_table.map_table[rs_table.id_packet[i].inst.r.rs2] == 0 || 
-         //       rs_table.map_table[rs_table.id_packet[i].inst.r.rs2][0] == 1) && 
-         //       exec_busy[i] == 0 && rs_table.busy_signal[i] == 1) begin
-         // exec_run[i] <= ((rs_table.map_table[input_reg_1] == 0 ||
-         //          rs_table.map_table[input_reg_1][0] == 1) && 
-         //          (rs_table.map_table[input_reg_2] == 0 || 
-         //          rs_table.map_table[input_reg_2][0] == 1) && 
-         //          exec_busy[i] == 0 && rs_table.busy_signal[i] == 1);
-         if (exec_busy[i] == 1) begin: clear_RS
-            out.busy_signal[i] <= 0; // next cycle
-         end
-      end // for loop
+      
+      
 
             if (ready_in_rob_valid) begin
                $display("Ready Rob NUmber:%d", ready_rob_num);
@@ -234,8 +244,8 @@ task process_instr(
                   idx,
                   rs_table.busy_signal[idx],
                   exec_run);
-
-		if (idx <= 4 && rs_table.busy_signal[idx] == 0) begin
+		//&& rs_table.busy_signal[idx] == 0
+		if (idx <= 4 ) begin
 		    out.inst[idx] <= inst;
 		    out.busy_signal[idx] <= 1;
 		    out.out_opcode[idx] <= opcode;
@@ -246,6 +256,7 @@ task process_instr(
 		    out.T1[idx] <= rs_table.map_table[input_reg_1][4:1];
 		    out.T2[idx] <= rs_table.map_table[input_reg_2][4:1];
 		    out.id_packet[idx] <= id_packet;
+		    
 		   //  exec_run[idx] <= 1;
           
          // exec_run[idx] <= ((rs_table.map_table[input_reg_1] == 0 ||
@@ -266,6 +277,23 @@ task process_instr(
 		    out.T1[5] <= rs_table.map_table[input_reg_1][4:1];
 		    out.T2[5] <= rs_table.map_table[input_reg_2][4:1];
 		    out.id_packet[5] <= id_packet;
+		    /*for (int i = 0; i <= `RS_SIZE; i++) begin
+         		 if(exec_run[i] == 1) begin
+			    out.busy_signal[i] <= 0;
+			 end
+			 exec_run[i] <= ((rs_table.map_table[input_reg_1] == 0 ||
+				   rs_table.map_table[input_reg_1][0] == 1) && 
+				   (rs_table.map_table[input_reg_2] == 0 || 
+				   rs_table.map_table[input_reg_2][0] == 1) && 
+				   exec_busy[i] == 0 && rs_table.busy_signal[i] == 1 && i != 5);
+			 if ((rs_table.map_table[input_reg_1] == 0 ||
+				   rs_table.map_table[input_reg_1][0] == 1) && 
+				   (rs_table.map_table[input_reg_2] == 0 || 
+				   rs_table.map_table[input_reg_2][0] == 1) && 
+				   exec_busy[i] == 0 && rs_table.busy_signal[i] == 1 && i != 5) begin: clear_RS
+			    out.busy_signal[i] <= 0; // next cycle
+         	    	 end
+		    end // for loop*/
 		   //  exec_run[idx] <= 1;
          // exec_run[5] <= ((rs_table.map_table[input_reg_1] == 0 ||
          //                   rs_table.map_table[input_reg_1][0] == 1) && 

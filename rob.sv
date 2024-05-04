@@ -63,7 +63,7 @@ module rob (
             out <= rob_table;
             
             if(valid == 1) begin
-                if(rob_table.head == 0 && rob_table.tail == 0) begin
+                /*if(rob_table.head == 0 && rob_table.tail == 0) begin
                   out.head            <= 1;
                   out.tail            <= 1;
                   out.opcodes[0]      <= opcode;
@@ -71,7 +71,7 @@ module rob (
                   out.input_reg_2s[0] <= input_reg_2;
                   out.Rs[0]           <= dest_reg;
 		            out.id_packet[0]    <= id_packet;
-               end else begin
+               end else begin*/
                   if(rob_table.tail == 7) begin
 			            out.opcodes[0] <= opcode;
                      out.input_reg_1s[0] <= input_reg_1;
@@ -102,7 +102,7 @@ module rob (
 			            end
 		            end
                end
-            end
+            //end
 
       if (value_valid == 1) begin
          $display("   ```value_tag: %d     value: %d", value_tag, value);

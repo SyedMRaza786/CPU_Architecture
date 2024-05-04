@@ -418,11 +418,11 @@ module pipeline (
 
    logic alu_busy, br_busy, ls_busy, mult0_busy, mult1_busy;
    always_comb begin
-      alu_busy   = (cdb_out_packet.clear ^ cdb_out_packet.fu_opcode == ALU_FU) ? 0 : 1;
-      br_busy    = (cdb_out_packet.clear ^ cdb_out_packet.fu_opcode == BR_FU) ? 0 : 1;
-      ls_busy    = (cdb_out_packet.clear ^ cdb_out_packet.fu_opcode == LS_FU) ? 0 : 1;
-      mult0_busy = (cdb_out_packet.clear ^ cdb_out_packet.fu_opcode == MULT0_FU) ? 0 : 1;
-      mult1_busy = (cdb_out_packet.clear ^ cdb_out_packet.fu_opcode == MULT1_FU) ? 0 : 1;
+      alu_busy   = (cdb_out_packet.clear ^ cdb_out_packet.fu_opcode == ALU_FU) ? 1 : 0;
+      br_busy    = (cdb_out_packet.clear ^ cdb_out_packet.fu_opcode == BR_FU) ? 1 : 0;
+      ls_busy    = (cdb_out_packet.clear ^ cdb_out_packet.fu_opcode == LS_FU) ? 1 : 0;
+      mult0_busy = (cdb_out_packet.clear ^ cdb_out_packet.fu_opcode == MULT0_FU) ? 1 : 0;
+      mult1_busy = (cdb_out_packet.clear ^ cdb_out_packet.fu_opcode == MULT1_FU) ? 1 : 0;
    end
 
    logic ready_in_rob_valid;
