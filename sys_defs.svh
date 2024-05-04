@@ -13,7 +13,7 @@
 // all files should `include "sys_defs.svh" to at least define the timescale
 `timescale 1ns/100ps
 
-`define ROB_SZ_7
+`define ROB_SZ_8
 
 ///////////////////////////////////
 // ---- Starting Parameters ---- //
@@ -21,20 +21,23 @@
 
 // some starting parameters that you should set
 // this is *your* processor, you decide these values (try analyzing which is best!)
+
 `define RS_SIZE 6
+
 `define FU_OPCODE_BIT_WIDTH 3
 `define ALU_FU_SELECT_BIT_WIDTH 3
-`define TOTAL_NUM_FU 5 // Total # of functional units in EX
+`define TOTAL_NUM_FU 5
 `define REG_ADDR_BIT_WIDTH 5
-`ifdef ROB_SZ_7
-`define ROB_SIZE 7
+
+`ifdef ROB_SZ_8
+`define ROB_SIZE 8
 `endif
 
 `ifdef ROB_SZ_16
 `define ROB_SIZE 16
 `endif
 
-`define ROB_BIT_WIDTH ($clog2(`ROB_SIZE + 1) + 1)
+`define ROB_BIT_WIDTH ($clog2(`ROB_SIZE) + 1)
 
 // MAP Table
 `define TAG_SIZE 4
