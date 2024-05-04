@@ -25,9 +25,6 @@
 // -------------------- I$ D$ Mem --------------------- //
 //////////////////////////////////////////////////////////
 
-`define FU_OPCODE_BIT_WIDTH 3
-`define ALU_FU_SELECT_BIT_WIDTH 3
-
 `define REG_ADDR_BIT_WIDTH 5
 
 //////////////////////////////////////////////////////////
@@ -37,6 +34,12 @@
 `define MULT_STAGES 4
 `define DW_SIZE ((`XLEN * 2))
 `define BITS_PER_STAGE (`DW_SIZE / `MULT_STAGES)
+
+`define FU_OPCODE_BIT_WIDTH 3
+`define ALU_FU_SELECT_BIT_WIDTH 3
+
+`define ALU_START_IDX 1
+
 
 //////////////////////////////////////////////////////////
 // OOO Pipeline Components: Functional Units + RS + ROB //
