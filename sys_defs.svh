@@ -25,7 +25,8 @@
 // -------------------- I$ D$ Mem --------------------- //
 //////////////////////////////////////////////////////////
 
-`define REG_ADDR_BIT_WIDTH 5
+`define NUM_REGS 32
+`define REG_ADDR_BIT_WIDTH ($clog(`NUM_REGS))
 `define REG_ADDR_WIDTH `REG_ADDR_BIT_WIDTH
 `define REG_BITS `REG_ADDR_BIT_WIDTH    // 5
 `define REG_OFFSET_BITS (`REG_BITS - 1) // 4
@@ -45,8 +46,8 @@
 `define ALU_FU_SELECT_BIT_WIDTH `FU_OPCODE_BIT_WIDTH
 
 
-`define FU_FIRST_IDX 0
-`define FU_LAST_IDX (`FU_FIRST_IDX + `TOTAL_NUM_FU)
+`define FU_FIRST_IDX 1
+`define FU_LAST_IDX (`FU_FIRST_IDX + `TOTAL_NUM_FU - 1)
 `define ALU_START_IDX 1
 
 
@@ -285,10 +286,10 @@ typedef union packed {
 /////////////////////////////////////////////////
 
 typedef enum logic [`ALU_FU_SELECT_BIT_WIDTH-1:0] {
-    ALU_FU = 3'b001,
+    ALU0_FU = 3'b001,
     MULT0_FU  = 3'b010,
-    LS_FU  = 3'b011,
-    BR_FU  = 3'b100,
+    LS0_FU  = 3'b011,
+    BR0_FU  = 3'b100,
     UNKNOWN_FU = 3'b000,
     MULT1_FU = 3'b101
 } Opcode;
@@ -298,10 +299,18 @@ typedef struct {
     int idx;
 } OperationType;
 
+typedef enum {
+   UNKNOWN,
+   FU_ALU,
+   FU_LS,
+   FU_BRANCH,
+   FU_MULT
+} fu_opcode;
+
 // IMPORTANT!!! THE ORDER OF DECLARATION MATTERS FOR THIS AND @operationDetails
 typedef enum {
    UNKNOWN,
-   ALU,
+   ALU0,
    MULT0,
    LS,
    BR,
@@ -310,7 +319,7 @@ typedef enum {
 
 // @TODO: Decoder
 // IMPORTANT!!! THE ORDER OF DECLARATION MATTERS FOR THIS AND @operationDetails
-const OperationType funcUnits[6] = '{
+const OperationType fu[(`TOTAL_NUM_FU + 1)] = '{
    '{0, 0}, // Unknown
    '{1, 1}, // ALU
    '{2, 4}, // MULT0

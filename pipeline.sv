@@ -330,7 +330,7 @@ module pipeline (
     EX_CDB_PACKET ex_alu0_2_cdb, ex_m0_2_cdb, ex_m1_2_cdb, ex_b0_2_cdb, ex_ls0_2_cdb;
     logic [2:0] cdb_unit, cdb_tag_alu, cdb_tag_mult0, cdb_tag_mult1, cdb_tag_load_store, cdb_tag_branch;
     logic [`XLEN-1:0]      	ready_in_rob_register;
-    logic rob_is_full;
+    logic rob_is_full, rs_is_full;
 
     rob rob_unit(
         .clock(clock),
@@ -343,10 +343,10 @@ module pipeline (
         .input_reg_2(id_packet.inst.r.rs2),
         .dest_reg(id_packet.inst.r.rd),
         .value(value_rob),
-        .rob_table(rob_table),
+        .rob_in(rob_table),
         .id_packet(id_packet),
         // Outputs
-        .out(rob_table),
+        .rob_out(rob_table),
         .retire_out(retire_out),
         .retire_in(retire_in),
         .rob_is_full(rob_is_full)
@@ -369,11 +369,11 @@ module pipeline (
         .ROB_number(rob_table.tail),
         .input_reg_1(id_packet.inst.r.rs1),
         .input_reg_2(id_packet.inst.r.rs2),
-        .dest_reg(id_packet.inst.r.rd),
+        .rd(id_packet.inst.r.rd),
         .done_signal(rs_done_signal),
-        .value_1(id_packet.rs1_value),
-        .value_2(id_packet.rs2_value), 
-        .rs_table(rs_table),
+        .v1(id_packet.rs1_value),
+        .v2(id_packet.rs2_value), 
+        .rs_in(rs_table),
         .ready_in_rob_valid(ready_in_rob_valid),
         .ready_in_rob_register(ready_in_rob_register), 
         .ready_rob_num(ready_rob_num),
@@ -383,9 +383,10 @@ module pipeline (
         .id_packet(id_packet),
         .exec_busy({mult1_busy, mult0_busy, br_busy, ls_busy, alu_busy, 1'b0}),
         // Outputs
-        .out(rs_table),
+        .rs_out(rs_table),
         .exec_run(run_exec),
-        .to_cdb(rs_out_packet)
+        .to_cdb(rs_out_packet),
+        .rs_is_full(rs_is_full)
    );
 
 
@@ -576,17 +577,29 @@ module pipeline (
 	            value_rob       <= cdb_out_packet.value;
 	            value_tag       <= cdb_out_packet.tag;
                 value_valid     <= 1;
-            if (cdb_out_packet.clear && cdb_out_packet.fu_opcode == funcUnits[ALU].opcode) begin
-                cdb_unit <= 1;
+`ifdef DEBUG
+        string fu_clear_signals = "";
+        integer j;
+        for (j = ALU0; j <= MULT1; j++) begin
+            if (cdb_out_packet.clear && cdb_out_packet.fu_opcode == fu[j].opcode) begin
+                cdb_unit <= fu[j].idx;
+                fu_clear_signals = {fu_clear_signals, " ", j.name()};
+            end
+        end
+        if (fu_clear_signals != "") begin $display("Functional units from the CDB with CLEAR signals: %s", fu_clear_signals); end
+        else begin $display("No functional units from the CDB have CLEAR signals"); end
+`endif
+            if (cdb_out_packet.clear && cdb_out_packet.fu_opcode == fu[ALU0].opcode) begin
+                cdb_unit <= fu[ALU0].idx;
                 $display("Clearing ALU FU entry from CDB");
-                end else if(cdb_out_packet.clear && cdb_out_packet.fu_opcode == funcUnits[MULT0].opcode) begin
-                    cdb_unit <= 4;
-                end else if (cdb_out_packet.clear && cdb_out_packet.fu_opcode == funcUnits[MULT1].opcode) begin
-                    cdb_unit <= 5;
-                end else if (cdb_out_packet.clear && cdb_out_packet.fu_opcode == funcUnits[LS].opcode) begin
-                    cdb_unit <= funcUnits[LS].idx;
-                end else if (cdb_out_packet.clear && cdb_out_packet.fu_opcode == funcUnits[BR].opcode) begin
-                    cdb_unit <= funcUnits[BR].idx;
+                end else if(cdb_out_packet.clear && cdb_out_packet.fu_opcode == fu[MULT0].opcode) begin
+                    cdb_unit <= fu[MULT0].idx;
+                end else if (cdb_out_packet.clear && cdb_out_packet.fu_opcode == fu[MULT1].opcode) begin
+                    cdb_unit <= fu[MULT1].idx;
+                end else if (cdb_out_packet.clear && cdb_out_packet.fu_opcode == fu[LS0].opcode) begin
+                    cdb_unit <= fu[LS0].idx;
+                end else if (cdb_out_packet.clear && cdb_out_packet.fu_opcode == fu[BR0].opcode) begin
+                    cdb_unit <= fu[BR0].idx;
                 end
             end else begin
                 value_valid     <= 0;
