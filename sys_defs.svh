@@ -26,6 +26,9 @@
 //////////////////////////////////////////////////////////
 
 `define REG_ADDR_BIT_WIDTH 5
+`define REG_ADDR_WIDTH `REG_ADDR_BIT_WIDTH
+`define REG_BITS `REG_ADDR_BIT_WIDTH    // 5
+`define REG_OFFSET_BITS (`REG_BITS - 1) // 4
 
 //////////////////////////////////////////////////////////
 // --------------------- EX Stage --------------------- //
@@ -35,9 +38,15 @@
 `define DW_SIZE ((`XLEN * 2))
 `define BITS_PER_STAGE (`DW_SIZE / `MULT_STAGES)
 
-`define FU_OPCODE_BIT_WIDTH 3
-`define ALU_FU_SELECT_BIT_WIDTH 3
+`define TOTAL_NUM_FU 5
+`define FU_OPCODE_BIT_WIDTH ($clog(`TOTAL_NUM_FU))
+`define FU_OP_WIDTH `FU_OPCODE_BIT_WIDTH
+`define FU_OPCODE_WIDTH `FU_OPCODE_BIT_WIDTH
+`define ALU_FU_SELECT_BIT_WIDTH `FU_OPCODE_BIT_WIDTH
 
+
+`define FU_FIRST_IDX 0
+`define FU_LAST_IDX (`FU_FIRST_IDX + `TOTAL_NUM_FU)
 `define ALU_START_IDX 1
 
 
@@ -46,7 +55,7 @@
 //////////////////////////////////////////////////////////
 
 `define RS_SIZE 6
-`define TOTAL_NUM_FU 5
+
 
 `ifdef ROB_SZ_8
 `define ROB_SIZE 8
@@ -55,13 +64,21 @@
 `define ROB_SIZE 16
 `endif
 
-`define ROB_BIT_WIDTH ($clog2(`ROB_SIZE) + 1)
+`define ROB_BIT_WIDTH ($clog2(`ROB_SIZE) + 1) // 4
+`define ROB_BIT_LEN `ROB_BIT_WIDTH
+`define ROB_BITS `ROB_BIT_WIDTH
+`define ROB_SIZE_BITS `ROB_BIT_WIDTH
+`define ROB_WIDTH `ROB_BIT_WIDTH
+`define ROB_OFFSET_BITS (`ROB_BIT_WIDTH - 1)
+
+`define ROB_LAST_IDX (`ROB_SIZE - 1)    // 7
+`define ROB_FIRST_IDX 0                 // 1
 
 // MAP Table
-`define TAG_SIZE 4
+`define TAG_SIZE `ROB_BIT_WIDTH
 
 // @TODO: CDB: tag_bit_width == 4
-`define CDB_TAG_BIT_WIDTH 4
+`define CDB_TAG_BIT_WIDTH `ROB_BIT_WIDTH
 `define CDB_OUT_PACKET_LEN (`XLEN + `CDB_TAG_BIT_WIDTH + `TOTAL_NUM_FU + `FU_OPCODE_BIT_WIDTH + 2)
 
 // sizes
@@ -74,10 +91,10 @@
 `define LSQ_SZ xx
 
 // functional units (you should decide if you want more or fewer types of FUs)
-`define NUM_FU_ALU xx
-`define NUM_FU_MULT xx
-`define NUM_FU_LOAD xx
-`define NUM_FU_STORE xx
+`define NUM_FU_ALU 1
+`define NUM_FU_MULT 2
+`define NUM_FU_LOAD 1
+`define NUM_FU_STORE 1
 
 ///////////////////////////////
 // ---- Basic Constants ---- //
@@ -464,40 +481,41 @@ typedef struct {
 
 
 typedef struct {
-    logic                           buffer_full;
+    logic                           is_full;
     logic                           buffer_completed;
-    logic [`ROB_BIT_WIDTH-1:0]       head;
-    logic [`ROB_BIT_WIDTH-1:0]       tail;
-    logic [2:0]                      opcodes[`ROB_SIZE-1:0];
-    logic [`REG_ADDR_BIT_WIDTH-1:0]           input_reg_1s[`ROB_SIZE-1:0];
-    logic [`REG_ADDR_BIT_WIDTH-1:0]           input_reg_2s[`ROB_SIZE-1:0];
-    logic [`REG_ADDR_BIT_WIDTH-1:0]           dest_regs[`ROB_SIZE-1:0];
-    logic [`XLEN-1:0]                Rs[`ROB_SIZE-1:0];
-    logic [`XLEN-1:0]      Vs[`ROB_SIZE-1:0];
-    ID_EX_PACKET     id_packet[`ROB_SIZE-1:0];
+    logic [`ROB_BIT_WIDTH-1:0]      head;
+    logic [`ROB_BIT_WIDTH-1:0]      tail;
+    logic [2:0]                     opcodes[`ROB_SIZE-1:0];
+    logic [`REG_ADDR_BIT_WIDTH-1:0] input_reg_1s[`ROB_SIZE-1:0];
+    logic [`REG_ADDR_BIT_WIDTH-1:0] input_reg_2s[`ROB_SIZE-1:0];
+    logic [`REG_ADDR_BIT_WIDTH-1:0] dest_regs[`ROB_SIZE-1:0];
+    logic [`XLEN-1:0]               Rs[`ROB_SIZE-1:0];
+    logic [`XLEN-1:0]               Vs[`ROB_SIZE-1:0];
+    logic                           completed[`ROB_SIZE-1:0];
+    ID_EX_PACKET                    id_packet[`ROB_SIZE-1:0];
 } ROB;
 
 
-typedef struct packed {
-	logic [`XLEN-1:0]		            NPC;
-	logic [`XLEN-1:0]		            PC;
-	logic					               fu_done;
-	logic [`REG_ADDR_BIT_WIDTH-1:0]  dest_reg_idx;
-	logic [`XLEN-1:0]		            value;
-   logic [`CDB_TAG_BIT_WIDTH-1:0]        value_tag;
-   Opcode                        opcode;
-   logic [`REG_ADDR_BIT_WIDTH-1:0]  rs1_in;
-   logic [`REG_ADDR_BIT_WIDTH-1:0]  rs2_in;
-   logic					               value_valid;
-   logic                            is_mult;
-	logic				                  is_load_store;
-	logic 					            is_branch;
-	logic [`XLEN-1:0]	               branch_addr;
-	logic					               take_branch;
-   logic                            squash;
-   logic [`ROB_BIT_WIDTH-1:0]       squash_idx;
-	logic				                  halt;
-} ROB_ENTRY;
+// typedef struct packed {
+// 	logic [`XLEN-1:0]		            NPC;
+// 	logic [`XLEN-1:0]		            PC;
+// 	logic					               fu_done;
+// 	logic [`REG_ADDR_BIT_WIDTH-1:0]  dest_reg_idx;
+// 	logic [`XLEN-1:0]		            value;
+//    logic [`CDB_TAG_BIT_WIDTH-1:0]        value_tag;
+//    Opcode                        opcode;
+//    logic [`REG_ADDR_BIT_WIDTH-1:0]  rs1_in;
+//    logic [`REG_ADDR_BIT_WIDTH-1:0]  rs2_in;
+//    logic					               value_valid;
+//    logic                            is_mult;
+// 	logic				                  is_load_store;
+// 	logic 					            is_branch;
+// 	logic [`XLEN-1:0]	               branch_addr;
+// 	logic					               take_branch;
+//    logic                            squash;
+//    logic [`ROB_BIT_WIDTH-1:0]       squash_idx;
+// 	logic				                  halt;
+// } ROB_ENTRY;
 
 
 
